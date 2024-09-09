@@ -41,7 +41,8 @@ export default {
     async startRecording() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        this.mediaRecorder = new MediaRecorder(stream);
+        const options = { mimeType: 'audio/webm' };
+        this.mediaRecorder = new MediaRecorder(stream, options);
         this.mediaRecorder.ondataavailable = (event) => {
           if (event.data.size > 0) {
             this.socket.send(event.data);
