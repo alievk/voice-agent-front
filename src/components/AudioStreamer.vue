@@ -18,18 +18,6 @@ export default {
     };
   },
   methods: {
-    async testWebSocket() {
-      try {
-        await this.connectWebSocket();
-        this.socket.send('Hello, WebSocket!');
-        this.socket.onmessage = (event) => {
-          this.message = event.data;
-        };
-      } catch (error) {
-        console.error('WebSocket test failed:', error);
-        this.message = 'WebSocket test failed';
-      }
-    },
     async toggleRecording() {
       if (this.isRecording) {
         this.stopRecording();
@@ -59,7 +47,11 @@ export default {
         this.mediaRecorder.stop();
         this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
         this.isRecording = false;
-        this.socket.send('STOP_RECORDING');  // Send stop signal to server
+        
+        // Delay sending stop signal to server to ensure all audio data is sent
+        setTimeout(() => {
+          this.socket.send('STOP_RECORDING');
+        }, 1000);
       }
     },
     async connectWebSocket() {
@@ -102,19 +94,6 @@ export default {
         this.socket = null;
         this.isInitialized = false;
         console.log('WebSocket disconnected');
-      }
-    },
-    sendAudioChunk(chunk) {
-      if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-        if (chunk instanceof Float32Array) {
-          this.socket.send(chunk.buffer);
-          console.log(`Sent audio chunk: ${chunk.length} samples`);
-        } else {
-          console.warn('Invalid chunk type. Expected Float32Array.');
-        }
-      } else {
-        console.warn('WebSocket is not open. Cannot send audio chunk.');
-        this.stopRecording();
       }
     },
   },
