@@ -93,6 +93,11 @@ export default {
             reject(new Error('WebSocket connection timed out'));
           }
         }, 5000);
+        
+        this.socket.onmessage = (event) => {
+          const text = event.data;
+          this.$emit('transcription-received', text);
+        };
       });
     },
     disconnectWebSocket() {
