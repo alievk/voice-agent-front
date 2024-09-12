@@ -30,10 +30,10 @@ export default {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: {
-            sampleRate: 48000,
+            sampleRate: 16000,
             channelCount: 1,
-            echoCancellation: true,
-            noiseSuppression: true,
+            echoCancellation: false,
+            noiseSuppression: false,
           }
         });
         const options = { mimeType: 'audio/webm' };
@@ -57,7 +57,7 @@ export default {
         
         // Delay sending stop signal to server to ensure all audio data is sent
         setTimeout(() => {
-          this.socket.send('STOP_RECORDING');
+          this.socket.send('END_CONVERSATION');
         }, 1000);
       }
     },
