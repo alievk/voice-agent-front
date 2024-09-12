@@ -1,5 +1,5 @@
 <template>
-    <div id="conversation-log">
+    <div id="conversation-log" ref="conversationLog">
       <p v-for="(message, index) in messages" :key="index">
         [{{ message.timestamp }}] {{ message.role }}: {{ message.text }}
       </p>
@@ -8,7 +8,24 @@
 
 <script>
 export default {
-  props: ['messages']
+  props: ['messages'],
+  methods: {
+    scrollToBottom() {
+      this.$nextTick(() => {
+        if (this.$refs.conversationLog) {
+          this.$refs.conversationLog.scrollTop = this.$refs.conversationLog.scrollHeight;
+        }
+      });
+    }
+  },
+  watch: {
+    messages: {
+      handler() {
+        this.scrollToBottom();
+      },
+      deep: true
+    }
+  }
 }
 </script>
 
