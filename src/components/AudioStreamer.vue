@@ -87,7 +87,6 @@ export default {
         
         this.socket.onopen = () => {
           console.log('WebSocket connected successfully');
-          this.socket.send('TEST_MESSAGE');
           resolve();
         };
         
