@@ -1,7 +1,10 @@
 <template>
   <div>
-    <button @click="toggleRecording">
+    <button @click="toggleRecording" class="button">
       {{ isRecording ? 'Stop Recording' : 'Start Recording' }}
+    </button>
+    <button @click="toggleAudio" class="button">
+      {{ isPlaying ? 'Stop Audio' : 'Play Audio' }}
     </button>
     <p>{{ status }}</p>
   </div>
@@ -12,22 +15,28 @@ export default {
   data() {
     return {
       isRecording: false,
+      isPlaying: false,
       socket: null,
       mediaRecorder: null,
+      audioContext: null,
+      audioSource: null,
       status: 'Ready'
     };
   },
+
   methods: {
     async toggleRecording() {
       if (this.isRecording) {
         this.stopRecording();
-      } else {
-        await this.connectWebSocket();
+      } else if (!this.isPlaying) {
         this.startRecording();
       }
     },
+
     async startRecording() {
       try {
+        await this.connectWebSocket();
+
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: {
             sampleRate: 16000,
@@ -39,7 +48,7 @@ export default {
         const options = { mimeType: 'audio/webm' };
         this.mediaRecorder = new MediaRecorder(stream, options);
         this.mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
+          if (event.data.size > 0 && this.socket && this.socket.readyState === WebSocket.OPEN) {
             this.socket.send(event.data);
           }
         };
@@ -49,6 +58,7 @@ export default {
         console.error('Error starting recording:', error);
       }
     },
+
     stopRecording() {
       if (this.mediaRecorder) {
         this.mediaRecorder.stop();
@@ -61,6 +71,7 @@ export default {
         }, 1000);
       }
     },
+
     async connectWebSocket() {
       if (this.socket && this.socket.readyState === WebSocket.OPEN) {
         console.log('WebSocket already connected');
@@ -80,6 +91,7 @@ export default {
         
         this.socket.onerror = (error) => {
           console.error('WebSocket connection error:', error);
+          this.status = 'Connection error';
           reject(error);
         };
         
@@ -100,6 +112,7 @@ export default {
         };
       });
     },
+
     disconnectWebSocket() {
       if (this.socket) {
         this.socket.close(1000, "Normal closure");
@@ -108,9 +121,81 @@ export default {
         console.log('WebSocket disconnected');
       }
     },
+
+    async toggleAudio() {
+      if (this.isPlaying) {
+        this.stopPlayback();
+      } else {
+        await this.playAudio();
+      }
+    },
+
+    async playAudio() {
+      if (this.isPlaying) return;
+
+      try {
+        await this.connectWebSocket();
+        this.isPlaying = true;
+        this.status = 'Playing audio';
+
+        const response = await fetch(process.env.BASE_URL + 'data/jfk_full.mp4');
+        const arrayBuffer = await response.arrayBuffer();
+
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+
+        this.audioSource = this.audioContext.createBufferSource();
+        this.audioSource.buffer = audioBuffer;
+
+        // Connect to speakers
+        this.audioSource.connect(this.audioContext.destination);
+
+        // Connect to MediaStreamDestination for WebSocket streaming
+        const streamDestination = this.audioContext.createMediaStreamDestination();
+        this.audioSource.connect(streamDestination);
+
+        const options = { mimeType: 'audio/webm' };
+        this.mediaRecorder = new MediaRecorder(streamDestination.stream, options);
+
+        this.mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0 && this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(event.data);
+          }
+        };
+
+        this.mediaRecorder.start(100);
+        this.audioSource.start(0);
+
+        this.audioSource.onended = () => {
+          this.stopPlayback();
+        };
+      } catch (error) {
+        console.error('Error playing audio:', error);
+      }
+    },
+
+    stopPlayback() {
+      if (this.audioSource) {
+        this.audioSource.stop();
+        this.audioSource.disconnect();
+      }
+      if (this.mediaRecorder) {
+        this.mediaRecorder.stop();
+      }
+      if (this.audioContext) {
+        this.audioContext.close();
+      }
+      this.isPlaying = false;
+      this.status = 'Ready';
+      
+      setTimeout(() => {
+        this.socket.send('END_CONVERSATION');
+      }, 1000);
+    },
   },
   beforeUnmount() {
     this.stopRecording();
+    this.stopPlayback();
     this.disconnectWebSocket();
   },
 };
@@ -128,5 +213,9 @@ export default {
 
 .mic-button.recording {
   background-color: #ff4444;
+}
+
+.button {
+  margin-right: 10px;
 }
 </style>
