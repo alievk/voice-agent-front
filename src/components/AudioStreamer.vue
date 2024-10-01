@@ -54,6 +54,7 @@ export default {
         };
         this.mediaRecorder.start(100); // Send audio data every 100ms
         this.isRecording = true;
+        this.$emit('connection-started');
       } catch (error) {
         console.error('Error starting recording:', error);
       }
@@ -86,6 +87,7 @@ export default {
         
         this.socket.onopen = () => {
           console.log('WebSocket connected successfully');
+          this.socket.send('TEST_MESSAGE');
           resolve();
         };
         
@@ -107,8 +109,9 @@ export default {
         }, 5000);
         
         this.socket.onmessage = (event) => {
-          const text = event.data;
-          this.$emit('transcription-received', text);
+          console.log('Received data:', event.data);
+          const data = JSON.parse(event.data);
+          this.$emit('transcription-received', data);
         };
       });
     },
@@ -135,9 +138,6 @@ export default {
 
       try {
         await this.connectWebSocket();
-        this.isPlaying = true;
-        this.status = 'Playing audio';
-
         const response = await fetch(process.env.BASE_URL + 'data/jfk_full.mp4');
         const arrayBuffer = await response.arrayBuffer();
 
@@ -169,6 +169,10 @@ export default {
         this.audioSource.onended = () => {
           this.stopPlayback();
         };
+
+        this.isPlaying = true;
+        this.status = 'Playing audio';
+        this.$emit('connection-started');
       } catch (error) {
         console.error('Error playing audio:', error);
       }

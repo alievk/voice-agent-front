@@ -1,9 +1,11 @@
 <template>
-    <div id="conversation-log" ref="conversationLog">
-      <p v-for="(message, index) in messages" :key="index">
-        [{{ message.timestamp }}] {{ message.role }}: {{ message.text }}
-      </p>
+  <div id="conversation-log" ref="conversationLog">
+    <div v-for="(message, index) in messages" :key="index" class="message-bubble">
+      <span class="timestamp">[{{ message.timestamp }}] {{ message.role }}: </span>
+      <span class="confirmed-text">{{ message.confirmedText }}</span>
+      <span class="unconfirmed-text">{{ message.unconfirmedText ? ' ' + message.unconfirmedText : '' }}</span>
     </div>
+  </div>
 </template>
 
 <script>
@@ -31,13 +33,29 @@ export default {
 
 <style scoped>
 #conversation-log {
-    flex: 1;
-    width: 100%;
-    max-height: 70vh;
-    overflow-y: auto;
-    margin-bottom: 20px;
-    border: 1px solid #ddd;
-    padding: 10px;
-    border-radius: 5px;
+  flex: 1;
+  width: 100%;
+  max-height: 70vh;
+  overflow-y: auto;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.message-bubble {
+  margin-bottom: 10px;
+}
+
+.timestamp {
+  font-weight: bold;
+}
+
+.confirmed-text {
+  color: black;
+}
+
+.unconfirmed-text {
+  color: gray;
 }
 </style>

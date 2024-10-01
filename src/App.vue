@@ -3,7 +3,7 @@
     <Sidebar :actions="actions" />
     <div class="main">
       <ConversationLog :messages="messages" />
-      <AudioStreamer @transcription-received="addMessage" />
+      <AudioStreamer @transcription-received="updateTranscription" @connection-started="clearMessages"/>
     </div>
   </div>
 </template>
@@ -26,19 +26,38 @@ export default {
     }
   },
   methods: {
-    addMessage(text) {
+    updateTranscription(data) {
+      const { speech_id, confirmed_text, unconfirmed_text } = data;
       const timestamp = new Date().toLocaleString('en-GB', {
         hour: '2-digit',
         minute: '2-digit',
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
+        // day: '2-digit',
+        // month: '2-digit',
+        // year: 'numeric'
       });
-      this.messages.push({ timestamp, role: 'User', text });
+
+      const existingMessage = this.messages.find(m => m.speechId === speech_id);
+      if (existingMessage) {
+        existingMessage.confirmedText = confirmed_text;
+        existingMessage.unconfirmedText = unconfirmed_text;
+      } else {
+        this.messages.push({
+          timestamp,
+          role: 'User',
+          speechId: speech_id,
+          confirmedText: confirmed_text,
+          unconfirmedText: unconfirmed_text
+        });
+      }
     },
+
     addAction(action) {
       this.actions.push(action);
     },
+
+    clearMessages() {
+      this.messages = [];
+    }
   },
 }
 </script>
