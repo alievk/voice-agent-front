@@ -3,8 +3,8 @@
     <button @click="toggleRecording" class="button">
       {{ isRecording ? 'Stop Recording' : 'Start Recording' }}
     </button>
-    <button @click="toggleAudio" class="button">
-      {{ isPlaying ? 'Stop Audio' : 'Play Audio' }}
+    <button v-for="(audio, index) in audioFiles" :key="index" @click="() => toggleAudio(index)" class="button">
+      {{ isPlaying[index] ? `Stop Audio ${index + 1}` : `Play Audio ${index + 1}` }}
     </button>
     <p>{{ status }}</p>
   </div>
@@ -15,12 +15,18 @@ export default {
   data() {
     return {
       isRecording: false,
-      isPlaying: false,
+      isPlaying: [false, false, false],
       socket: null,
       mediaRecorder: null,
       audioContext: null,
       audioSource: null,
-      status: 'Ready'
+      status: 'Ready',
+      audioFiles: [
+        'data/jfk_full.mp4',
+        'data/officer_en.mp4',
+        'data/virus_en.m4a'
+      ],
+      currentAudioIndex: null
     };
   },
 
@@ -28,7 +34,7 @@ export default {
     async toggleRecording() {
       if (this.isRecording) {
         this.stopRecording();
-      } else if (!this.isPlaying) {
+      } else if (!this.isPlaying.some(playing => playing)) {
         this.startRecording();
       }
     },
@@ -124,20 +130,20 @@ export default {
       }
     },
 
-    async toggleAudio() {
-      if (this.isPlaying) {
+    async toggleAudio(index) {
+      if (this.isPlaying[index]) {
         this.stopPlayback();
       } else {
-        await this.playAudio();
+        await this.playAudio(index);
       }
     },
 
-    async playAudio() {
-      if (this.isPlaying) return;
+    async playAudio(index) {
+      if (this.isPlaying.some(playing => playing)) return;
 
       try {
         await this.connectWebSocket();
-        const response = await fetch(process.env.BASE_URL + 'data/jfk_full.mp4');
+        const response = await fetch(process.env.BASE_URL + this.audioFiles[index]);
         const arrayBuffer = await response.arrayBuffer();
 
         this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -169,8 +175,9 @@ export default {
           this.stopPlayback();
         };
 
-        this.isPlaying = true;
-        this.status = 'Playing audio';
+        this.isPlaying[index] = true;
+        this.currentAudioIndex = index;
+        this.status = `Playing audio ${index + 1}`;
         this.$emit('connection-started');
       } catch (error) {
         console.error('Error playing audio:', error);
@@ -188,7 +195,10 @@ export default {
       if (this.audioContext) {
         this.audioContext.close();
       }
-      this.isPlaying = false;
+      if (this.currentAudioIndex !== null) {
+        this.isPlaying[this.currentAudioIndex] = false;
+        this.currentAudioIndex = null;
+      }
       this.status = 'Ready';
       
       setTimeout(() => {
