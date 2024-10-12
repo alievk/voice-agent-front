@@ -3,7 +3,7 @@
     <Sidebar :actions="actions" />
     <div class="main">
       <ConversationLog :messages="messages" />
-      <AudioStreamer @transcription-received="updateTranscription" @connection-started="clearMessages"/>
+      <AudioStreamer @transcription-received="updateTranscription" @new-conversation="clearMessages"/>
     </div>
   </div>
 </template>
