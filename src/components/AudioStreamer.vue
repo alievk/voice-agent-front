@@ -141,7 +141,14 @@ export default {
         this.socket.onmessage = (event) => {
           console.log('Received data:', event.data);
           const data = JSON.parse(event.data);
-          this.$emit('transcription-received', data);
+          const formattedData = {
+            role: data.role,
+            confirmedText: data.content,
+            unconfirmedText: '',
+            timestamp: data.time,
+            messageId: data.message_id
+          };
+          this.$emit('transcription-received', formattedData);
         };
       });
     },

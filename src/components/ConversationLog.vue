@@ -1,9 +1,9 @@
 <template>
   <div id="conversation-log" ref="conversationLog">
-    <div v-for="(message, index) in messages" :key="index" class="message-bubble">
+    <div v-for="message in messages" :key="message.messageId" class="message-bubble">
       <span class="timestamp">[{{ message.timestamp }}] {{ message.role }}: </span>
       <span class="confirmed-text">{{ message.confirmedText }}</span>
-      <span class="unconfirmed-text">{{ message.unconfirmedText ? ' ' + message.unconfirmedText : '' }}</span>
+      <span class="unconfirmed-text">{{ message.unconfirmedText }}</span>
     </div>
   </div>
 </template>

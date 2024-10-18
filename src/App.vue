@@ -27,27 +27,18 @@ export default {
   },
   methods: {
     updateTranscription(data) {
-      const { speech_id, confirmed_text, unconfirmed_text } = data;
-      const timestamp = new Date().toLocaleString('en-GB', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        // day: '2-digit',
-        // month: '2-digit',
-        // year: 'numeric'
-      });
+      const { role, confirmedText, timestamp, messageId } = data;
 
-      const existingMessage = this.messages.find(m => m.speechId === speech_id);
-      if (existingMessage) {
-        existingMessage.confirmedText = confirmed_text;
-        existingMessage.unconfirmedText = unconfirmed_text;
+      const existingMessageIndex = this.messages.findIndex(m => m.messageId === messageId);
+      if (existingMessageIndex !== -1) {
+        this.messages[existingMessageIndex] = { ...this.messages[existingMessageIndex], ...data };
       } else {
         this.messages.push({
+          role,
+          confirmedText,
+          unconfirmedText: '',
           timestamp,
-          role: 'User',
-          speechId: speech_id,
-          confirmedText: confirmed_text,
-          unconfirmedText: unconfirmed_text
+          messageId
         });
       }
     },
