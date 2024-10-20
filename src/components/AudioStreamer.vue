@@ -149,7 +149,7 @@ export default {
             confirmedText: data.content,
             unconfirmedText: '',
             timestamp: data.time,
-            messageId: data.message_id
+            messageId: data.id
           };
           this.$emit('transcription-received', formattedData);
         };
