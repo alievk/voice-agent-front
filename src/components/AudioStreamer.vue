@@ -98,9 +98,12 @@ export default {
         this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
         this.isRecording = false;
         
+        // Wait for the last ondataavailable event before sending STOP_RECORDING
+        this.mediaRecorder.onstop = () => {
         if (this.socket && this.socket.readyState === WebSocket.OPEN) {
           this.socket.send('STOP_RECORDING');
         }
+        };
       }
     },
 
