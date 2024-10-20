@@ -100,9 +100,9 @@ export default {
         
         // Wait for the last ondataavailable event before sending STOP_RECORDING
         this.mediaRecorder.onstop = () => {
-        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-          this.socket.send('STOP_RECORDING');
-        }
+          if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send('STOP_RECORDING');
+          }
         };
       }
     },
