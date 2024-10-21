@@ -2,12 +2,15 @@
   <div>
     <div class="button-row">
       <button @click="newConversation" class="button">New Conversation</button>
-    </div>
-    <div class="button-row">
       <button @click="toggleRecording" class="button">
         {{ isRecording ? 'Stop Recording' : 'Start Recording' }}
       </button>
-      <button v-for="(audio, index) in audioFiles" :key="index" @click="() => toggleAudio(index)" class="button">
+      <button 
+        v-for="(audio, index) in audioFiles" 
+        :key="index" 
+        @click="() => toggleAudio(index)" 
+        class="button"
+      >
         {{ isPlaying[index] ? `Stop Audio ${index + 1}` : `Play Audio ${index + 1}` }}
       </button>
     </div>
@@ -31,7 +34,12 @@ export default {
         'data/officer_en.mp4',
         'data/virus_en.m4a'
       ],
-      currentAudioIndex: null
+      currentAudioIndex: null,
+      mediaSource: null,
+      sourceBuffer: null,
+      audioElement: null,
+      chunks: [],
+      isPlayingAudio: false,
     };
   },
 
@@ -40,9 +48,9 @@ export default {
       this.stopRecording();
       this.stopPlayback();
       
-      if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+      if (this.isWebSocketConnected()) {
         this.socket.send('END_CONVERSATION');
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
       
       this.disconnectWebSocket();
@@ -53,39 +61,28 @@ export default {
     async toggleRecording() {
       if (this.isRecording) {
         this.stopRecording();
-      } else {
-        if (!this.isWebSocketConnected()) {
-          this.status = 'Error: WebSocket not connected';
-          return;
-        }
+      } else if (this.isWebSocketConnected()) {
         await this.startRecording();
+      } else {
+        this.status = 'Error: WebSocket not connected';
       }
     },
 
     async startRecording() {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            sampleRate: 16000,
-            channelCount: 1,
-            echoCancellation: false,
-            noiseSuppression: false,
-          }
+          audio: { sampleRate: 16000, channelCount: 1, echoCancellation: false, noiseSuppression: false }
         });
-        const options = { mimeType: 'audio/webm' };
-        this.mediaRecorder = new MediaRecorder(stream, options);
+        this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
         this.mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0 && this.socket && this.socket.readyState === WebSocket.OPEN) {
+          if (event.data.size > 0 && this.isWebSocketConnected()) {
             this.socket.send(event.data);
           }
         };
-        this.mediaRecorder.start(100); // Send audio data every 100ms
+        this.mediaRecorder.start(100);
         this.isRecording = true;
         this.$emit('recording-started');
-
-        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-          this.socket.send('START_RECORDING');
-        }
+        this.socket.send('START_RECORDING');
       } catch (error) {
         console.error('Error starting recording:', error);
         this.status = 'Error starting recording';
@@ -97,10 +94,8 @@ export default {
         this.mediaRecorder.stop();
         this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
         this.isRecording = false;
-        
-        // Wait for the last ondataavailable event before sending STOP_RECORDING
         this.mediaRecorder.onstop = () => {
-          if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+          if (this.isWebSocketConnected()) {
             this.socket.send('STOP_RECORDING');
           }
         };
@@ -108,15 +103,10 @@ export default {
     },
 
     async connectWebSocket() {
-      if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-        console.log('WebSocket already connected');
-        return;
-      }
+      if (this.isWebSocketConnected()) return;
       
       return new Promise((resolve, reject) => {
         const wsUrl = `wss://${window.location.hostname}:8765`;
-        
-        console.log(`Attempting to connect to WebSocket at ${wsUrl}`);
         this.socket = new WebSocket(wsUrl);
         
         this.socket.onopen = () => {
@@ -134,33 +124,42 @@ export default {
           console.log('WebSocket connection closed:', event.code, event.reason);
         };
 
-        // Add a timeout to reject the promise if the connection takes too long
         setTimeout(() => {
-          if (this.socket.readyState !== WebSocket.OPEN) {
+          if (!this.isWebSocketConnected()) {
             reject(new Error('WebSocket connection timed out'));
           }
         }, 5000);
         
-        this.socket.onmessage = (event) => {
-          console.log('Received data:', event.data);
-          const data = JSON.parse(event.data);
-          const formattedData = {
-            role: data.role,
-            confirmedText: data.content,
-            unconfirmedText: '',
-            timestamp: data.time,
-            messageId: data.id
-          };
-          this.$emit('transcription-received', formattedData);
-        };
+        this.socket.onmessage = this.handleWebSocketMessage;
       });
+    },
+
+    async handleWebSocketMessage(event) {
+      if (event.data instanceof Blob) {
+        console.log('Received audio chunk:', event.data.size, 'bytes');
+        if (event.data.size > 0) {
+          const arrayBuffer = await event.data.arrayBuffer();
+          this.handleAudioData(arrayBuffer);
+        } else {
+          console.warn('Received empty chunk');
+        }
+      } else {
+        const data = JSON.parse(event.data);
+        console.log('Received JSON data:', data);
+        this.$emit('transcription-received', {
+          role: data.role,
+          confirmedText: data.content,
+          unconfirmedText: '',
+          timestamp: data.time,
+          messageId: data.id
+        });
+      }
     },
 
     disconnectWebSocket() {
       if (this.socket) {
         this.socket.close(1000, "Normal closure");
         this.socket = null;
-        this.isInitialized = false;
         console.log('WebSocket disconnected');
       }
     },
@@ -168,12 +167,10 @@ export default {
     async toggleAudio(index) {
       if (this.isPlaying[index]) {
         this.stopPlayback();
-      } else {
-        if (!this.isWebSocketConnected()) {
-          this.status = 'Error: WebSocket not connected';
-          return;
-        }
+      } else if (this.isWebSocketConnected()) {
         await this.playAudio(index);
+      } else {
+        this.status = 'Error: WebSocket not connected';
       }
     },
 
@@ -189,19 +186,14 @@ export default {
 
         this.audioSource = this.audioContext.createBufferSource();
         this.audioSource.buffer = audioBuffer;
-
-        // Connect to speakers
         this.audioSource.connect(this.audioContext.destination);
 
-        // Connect to MediaStreamDestination for WebSocket streaming
         const streamDestination = this.audioContext.createMediaStreamDestination();
         this.audioSource.connect(streamDestination);
 
-        const options = { mimeType: 'audio/webm' };
-        this.mediaRecorder = new MediaRecorder(streamDestination.stream, options);
-
+        this.mediaRecorder = new MediaRecorder(streamDestination.stream, { mimeType: 'audio/webm' });
         this.mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0 && this.socket && this.socket.readyState === WebSocket.OPEN) {
+          if (event.data.size > 0 && this.isWebSocketConnected()) {
             this.socket.send(event.data);
           }
         };
@@ -209,9 +201,7 @@ export default {
         this.mediaRecorder.start(100);
         this.audioSource.start(0);
 
-        this.audioSource.onended = () => {
-          this.stopPlayback();
-        };
+        this.audioSource.onended = this.stopPlayback;
 
         this.isPlaying[index] = true;
         this.currentAudioIndex = index;
@@ -234,11 +224,7 @@ export default {
         this.mediaRecorder = null;
       }
       if (this.audioContext && this.audioContext.state !== 'closed') {
-        this.audioContext.close().then(() => {
-          this.audioContext = null;
-        }).catch(error => {
-          console.error('Error closing AudioContext:', error);
-        });
+        this.audioContext.close().catch(console.error);
       }
       if (this.currentAudioIndex !== null) {
         this.isPlaying[this.currentAudioIndex] = false;
@@ -250,8 +236,59 @@ export default {
     isWebSocketConnected() {
       return this.socket && this.socket.readyState === WebSocket.OPEN;
     },
+
+    initializeMediaSource() {
+      this.mediaSource = new MediaSource();
+      this.audioElement = new Audio();
+      this.audioElement.src = URL.createObjectURL(this.mediaSource);
+
+      this.mediaSource.addEventListener('sourceopen', () => {
+        this.sourceBuffer = this.mediaSource.addSourceBuffer('audio/webm; codecs="opus"');
+        this.sourceBuffer.mode = 'sequence';
+        this.sourceBuffer.addEventListener('updateend', this.appendNextChunk);
+      });
+    },
+
+    handleAudioData(chunk) {
+      if (!this.mediaSource) this.initializeMediaSource();
+      this.chunks.push(chunk);
+      if (!this.sourceBuffer || this.sourceBuffer.updating) return;
+      this.appendNextChunk();
+    },
+
+    appendNextChunk() {
+      if (this.chunks.length === 0 || this.sourceBuffer.updating) return;
+      const chunk = this.chunks.shift();
+      this.sourceBuffer.appendBuffer(chunk);
+      if (!this.isPlayingAudio) this.playReceivedAudio();
+    },
+
+    async playReceivedAudio() {
+      if (this.isPlayingAudio) return;
+      try {
+        await this.audioElement.play();
+        this.isPlayingAudio = true;
+        console.log('Audio playback started');
+      } catch (error) {
+        console.error('Error playing audio:', error);
+        this.isPlayingAudio = false;
+      }
+    },
   },
+
+  mounted() {
+    this.initializeMediaSource();
+  },
+
   beforeUnmount() {
+    if (this.mediaSource && this.mediaSource.readyState === 'open') {
+      this.mediaSource.endOfStream();
+    }
+    if (this.audioElement) {
+      URL.revokeObjectURL(this.audioElement.src);
+      this.audioElement.pause();
+      this.audioElement.src = '';
+    }
     this.stopRecording();
     this.stopPlayback();
     this.disconnectWebSocket();
@@ -262,13 +299,27 @@ export default {
 <style scoped>
 .button-row {
   display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-bottom: 10px;
 }
 
 .button {
-  margin-right: 10px;
-  padding: 10px;
+  padding: 10px 15px;
   font-size: 16px;
   cursor: pointer;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.button:hover {
+  background-color: #45a049;
+}
+
+.button:active {
+  background-color: #3e8e41;
 }
 </style>
