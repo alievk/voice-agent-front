@@ -3,7 +3,7 @@
     <Sidebar :actions="actions" />
     <div class="main">
       <ConversationLog :messages="messages" />
-      <AudioStreamer @transcription-received="updateTranscription" @new-conversation="clearMessages"/>
+      <AudioStreamer @transcription-received="updateTranscription"/>
     </div>
   </div>
 </template>
@@ -46,10 +46,6 @@ export default {
     addAction(action) {
       this.actions.push(action);
     },
-
-    clearMessages() {
-      this.messages = [];
-    }
   },
 }
 </script>

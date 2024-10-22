@@ -1,20 +1,22 @@
 <template>
-  <div>
-    <div class="button-row">
-      <button @click="newConversation" class="button">New Conversation</button>
-      <button @click="toggleRecording" class="button">
+  <div class="audio-streamer">
+    <div class="button-grid">
+      <button 
+        @click="toggleRecording" 
+        :class="['button', 'record-button', { 'active': isRecording }]"
+      >
         {{ isRecording ? 'Stop Recording' : 'Start Recording' }}
       </button>
       <button 
         v-for="(audio, index) in audioFiles" 
         :key="index" 
         @click="() => toggleAudio(index)" 
-        class="button"
+        :class="['button', 'play-button', { 'active': isPlaying[index] }]"
       >
         {{ isPlaying[index] ? `Stop Audio ${index + 1}` : `Play Audio ${index + 1}` }}
       </button>
     </div>
-    <p>{{ status }}</p>
+    <p class="status">{{ status }}</p>
   </div>
 </template>
 
@@ -44,32 +46,20 @@ export default {
   },
 
   methods: {
-    async newConversation() {
-      this.stopRecording();
-      this.stopPlayback();
-      
-      if (this.isWebSocketConnected()) {
-        this.socket.send('END_CONVERSATION');
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-      
-      this.disconnectWebSocket();
-      await this.connectWebSocket();
-      this.$emit('new-conversation');
-    },
-
     async toggleRecording() {
       if (this.isRecording) {
         this.stopRecording();
-      } else if (this.isWebSocketConnected()) {
-        await this.startRecording();
       } else {
-        this.status = 'Error: WebSocket not connected';
+        await this.startRecording();
       }
     },
 
     async startRecording() {
       try {
+        if (!this.isWebSocketConnected()) {
+          await this.connectWebSocket();
+        }
+
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: { sampleRate: 16000, channelCount: 1, echoCancellation: false, noiseSuppression: false }
         });
@@ -85,7 +75,7 @@ export default {
         this.socket.send('START_RECORDING');
       } catch (error) {
         console.error('Error starting recording:', error);
-        this.status = 'Error starting recording';
+        this.status = `Error: ${error.message}`;
       }
     },
 
@@ -167,10 +157,8 @@ export default {
     async toggleAudio(index) {
       if (this.isPlaying[index]) {
         this.stopPlayback();
-      } else if (this.isWebSocketConnected()) {
-        await this.playAudio(index);
       } else {
-        this.status = 'Error: WebSocket not connected';
+        await this.playAudio(index);
       }
     },
 
@@ -178,6 +166,10 @@ export default {
       if (this.isPlaying.some(playing => playing)) return;
 
       try {
+        if (!this.isWebSocketConnected()) {
+          await this.connectWebSocket();
+        }
+        
         const response = await fetch(process.env.BASE_URL + this.audioFiles[index]);
         const arrayBuffer = await response.arrayBuffer();
 
@@ -297,29 +289,54 @@ export default {
 </script>
 
 <style scoped>
-.button-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 10px;
+.audio-streamer {
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.button-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .button {
-  padding: 10px 15px;
-  font-size: 16px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  background-color: #4CAF50;
-  color: white;
   border: none;
-  border-radius: 4px;
-  transition: background-color 0.3s;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.button:hover {
+.record-button {
+  background-color: #ff4136;
+  color: white;
+}
+
+.record-button:hover, .record-button.active {
+  background-color: #e60000;
+}
+
+.play-button {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.play-button:hover, .play-button.active {
   background-color: #45a049;
 }
 
-.button:active {
-  background-color: #3e8e41;
+.status {
+  font-size: 16px;
+  text-align: center;
+  color: #333;
+  margin-top: 12px;
 }
 </style>
