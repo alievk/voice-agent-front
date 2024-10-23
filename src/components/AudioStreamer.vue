@@ -266,10 +266,21 @@ export default {
         this.isPlayingAudio = false;
       }
     },
+
+    async initializeConnection() {
+      try {
+        await this.connectWebSocket();
+        this.status = 'Connected to server';
+      } catch (error) {
+        console.error('Failed to connect to server:', error);
+        this.status = 'Failed to connect to server';
+      }
+    },
   },
 
   mounted() {
     this.initializeMediaSource();
+    this.initializeConnection();
   },
 
   beforeUnmount() {
