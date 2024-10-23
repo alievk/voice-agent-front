@@ -161,6 +161,9 @@ export default {
     async toggleAudio(index) {
       if (this.isPlaying[index]) {
         this.stopPlayback();
+        if (this.isWebSocketConnected()) {
+          this.socket.send('STOP_RECORDING');
+        }
       } else {
         await this.playAudio(index);
       }
@@ -197,7 +200,13 @@ export default {
         this.mediaRecorder.start(100);
         this.audioSource.start(0);
 
-        this.audioSource.onended = this.stopPlayback;
+        this.socket.send('START_RECORDING');
+
+        this.audioSource.onended = () => {
+          if (this.isWebSocketConnected()) {
+            this.socket.send('STOP_RECORDING');
+          }
+        };
 
         this.isPlaying[index] = true;
         this.currentAudioIndex = index;
