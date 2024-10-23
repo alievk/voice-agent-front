@@ -271,9 +271,11 @@ export default {
       try {
         await this.connectWebSocket();
         this.status = 'Connected to server';
+        this.$emit('connection-established');
       } catch (error) {
         console.error('Failed to connect to server:', error);
         this.status = 'Failed to connect to server';
+        this.$emit('connection-failed');
       }
     },
   },

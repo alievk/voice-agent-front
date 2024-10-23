@@ -1,5 +1,6 @@
 <template>
   <div id="conversation-log" ref="conversationLog">
+    <div v-if="isWarmingUp" class="warming-up-message">Warming up the models...</div>
     <div v-for="message in messages" :key="message.messageId" class="message-bubble">
       <span class="timestamp">[{{ message.timestamp }}] {{ message.role }}: </span>
       <span class="confirmed-text">{{ message.confirmedText }}</span>
@@ -10,7 +11,7 @@
 
 <script>
 export default {
-  props: ['messages'],
+  props: ['messages', 'isWarmingUp'],
   methods: {
     scrollToBottom() {
       this.$nextTick(() => {
@@ -57,5 +58,11 @@ export default {
 
 .unconfirmed-text {
   color: gray;
+}
+
+.warming-up-message {
+  font-style: italic;
+  text-align: left;
+  color: #4a4a4a;
 }
 </style>

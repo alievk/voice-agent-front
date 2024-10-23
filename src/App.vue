@@ -2,8 +2,11 @@
   <div class="container">
     <Sidebar :actions="actions" />
     <div class="main">
-      <ConversationLog :messages="messages" />
-      <AudioStreamer @transcription-received="updateTranscription"/>
+      <ConversationLog :messages="messages" :isWarmingUp="isWarmingUp" />
+      <AudioStreamer 
+        @transcription-received="updateTranscription"
+        @connection-established="showWarmingUpMessage"
+      />
     </div>
   </div>
 </template>
@@ -23,11 +26,16 @@ export default {
     return {
       messages: [],
       actions: [],
+      isWarmingUp: false,
     }
   },
   methods: {
     updateTranscription(data) {
       const { role, confirmedText, timestamp, messageId } = data;
+
+      if (this.isWarmingUp) {
+        this.isWarmingUp = false;
+      }
 
       const existingMessageIndex = this.messages.findIndex(m => m.messageId === messageId);
       if (existingMessageIndex !== -1) {
@@ -45,6 +53,10 @@ export default {
 
     addAction(action) {
       this.actions.push(action);
+    },
+
+    showWarmingUpMessage() {
+      this.isWarmingUp = true;
     },
   },
 }
