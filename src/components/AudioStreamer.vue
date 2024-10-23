@@ -4,6 +4,7 @@
       <button 
         @click="toggleRecording" 
         :class="['button', 'record-button', { 'active': isRecording }]"
+        :disabled="buttonsDisabled"
       >
         {{ isRecording ? 'Stop Recording' : 'Start Recording' }}
       </button>
@@ -12,6 +13,7 @@
         :key="index" 
         @click="() => toggleAudio(index)" 
         :class="['button', 'play-button', { 'active': isPlaying[index] }]"
+        :disabled="buttonsDisabled"
       >
         {{ isPlaying[index] ? `Stop Audio ${index + 1}` : `Play Audio ${index + 1}` }}
       </button>
@@ -42,6 +44,7 @@ export default {
       audioElement: null,
       chunks: [],
       isPlayingAudio: false,
+      buttonsDisabled: true,
     };
   },
 
@@ -125,6 +128,7 @@ export default {
     },
 
     async handleWebSocketMessage(event) {
+      this.buttonsDisabled = false;
       if (event.data instanceof Blob) {
         console.log('Received audio chunk:', event.data.size, 'bytes');
         if (event.data.size > 0) {
@@ -326,6 +330,11 @@ export default {
   transition: all 0.3s ease;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .record-button {
