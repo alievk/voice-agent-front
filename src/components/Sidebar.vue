@@ -1,6 +1,6 @@
 <template>
     <div class="AppSidebar">
-      <h3>Actions</h3>
+      <h3>Conversation</h3>
       <ul>
         <li v-for="(action, index) in actions" :key="index">{{ action }}</li>
       </ul>
