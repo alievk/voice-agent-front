@@ -4,7 +4,7 @@
     <div class="main-content">
       <ConversationLog :messages="messages" :isWarmingUp="isWarmingUp" />
       <AudioStreamer 
-        @transcription-received="updateTranscription"
+        @message-received="updateMessages"
         @connection-established="showWarmingUpMessage"
       />
     </div>
@@ -30,8 +30,8 @@ export default {
     }
   },
   methods: {
-    updateTranscription(data) {
-      const { role, confirmedText, timestamp, messageId } = data;
+    updateMessages(data) {
+      const { role, content, timestamp, messageId } = data;
 
       if (this.isWarmingUp) {
         this.isWarmingUp = false;
@@ -43,8 +43,7 @@ export default {
       } else {
         this.messages.push({
           role,
-          confirmedText,
-          unconfirmedText: '',
+          content,
           timestamp,
           messageId
         });

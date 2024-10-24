@@ -125,24 +125,27 @@ export default {
 
     async handleWebSocketMessage(event) {
       this.buttonsDisabled = false;
-      if (event.data instanceof Blob) {
-        console.log('Received audio chunk:', event.data.size, 'bytes');
-        if (event.data.size > 0) {
-          const arrayBuffer = await event.data.arrayBuffer();
-          this.handleAudioData(arrayBuffer);
-        } else {
-          console.warn('Received empty chunk');
-        }
-      } else {
-        const data = JSON.parse(event.data);
-        console.log('Received JSON data:', data);
-        this.$emit('transcription-received', {
-          role: data.role,
-          confirmedText: data.content,
-          unconfirmedText: '',
-          timestamp: data.time,
-          messageId: data.id
+      const arrayBuffer = await event.data.arrayBuffer();
+      const dataView = new DataView(arrayBuffer);
+      const metadataLength = dataView.getUint32(0);
+      const metadata = JSON.parse(new TextDecoder().decode(arrayBuffer.slice(4, 4 + metadataLength)));
+
+      if (metadata.type === 'audio') {
+        const audioData = arrayBuffer.slice(4 + metadataLength);
+        console.log('Received audio chunk:', audioData.byteLength, 'bytes');
+        this.handleAudioData(audioData);
+      }
+      else if (metadata.type === 'message') {
+        console.log('Received message:', metadata);
+        this.$emit('message-received', {
+          role: metadata.role,
+          content: metadata.content,
+          timestamp: metadata.time,
+          messageId: metadata.id
         });
+      }
+      else {
+        console.error('Unknown message type:', metadata.type);
       }
     },
 

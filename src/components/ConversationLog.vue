@@ -3,8 +3,7 @@
     <div v-if="isWarmingUp" class="warming-up-message">Warming up the models...</div>
     <div v-for="message in messages" :key="message.messageId" class="message-bubble">
       <span class="timestamp">[{{ message.timestamp }}] {{ message.role }}: </span>
-      <span class="confirmed-text">{{ message.confirmedText }}</span>
-      <span class="unconfirmed-text">{{ message.unconfirmedText }}</span>
+      <span class="content">{{ message.content }}</span>
     </div>
   </div>
 </template>
@@ -58,12 +57,8 @@ export default {
   color: #6c757d;
 }
 
-.confirmed-text {
+.content {
   color: #212529;
-}
-
-.unconfirmed-text {
-  color: #6c757d;
 }
 
 .warming-up-message {
