@@ -132,7 +132,7 @@ export default {
 
       if (metadata.type === 'audio') {
         const audioData = arrayBuffer.slice(4 + metadataLength);
-        console.log('Received audio chunk:', audioData.byteLength, 'bytes');
+        console.log('Received audio with id:', metadata.id, 'and length:', audioData.byteLength, 'bytes');
         this.handleAudioData(audioData);
       }
       else if (metadata.type === 'message') {
