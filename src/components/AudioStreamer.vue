@@ -60,6 +60,8 @@ export default {
           await this.connectWebSocket();
         }
 
+        this.stopAssistantAudioPlayback();
+
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: { sampleRate: 16000, channelCount: 1, echoCancellation: false, noiseSuppression: false }
         });
@@ -277,6 +279,26 @@ export default {
         console.error('Error playing assistant audio:', error);
         this.isPlayingAssistantAudio = false;
       }
+    },
+
+    stopAssistantAudioPlayback() {
+      if (this.assistantAudioElement) {
+        this.assistantAudioElement.pause();
+        this.assistantAudioElement.src = '';
+        this.isPlayingAssistantAudio = false;
+      }
+      
+      if (this.assistantAudioMediaSource) {
+        if (this.assistantAudioMediaSource.readyState === 'open') {
+          this.assistantAudioMediaSource.endOfStream();
+        }
+        this.assistantAudioMediaSource = null;
+      }
+      
+      this.assistantAudioSourceBuffer = null;
+      this.assistantAudioChunks = [];
+      
+      this.initializeAssistantAudioMediaSource();
     },
 
     async initializeConnection() {
