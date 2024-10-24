@@ -2,9 +2,8 @@
   <div class="audio-streamer">
     <div class="button-container">
       <button 
-        @mousedown="startRecording"
-        @mouseup="stopRecording"
-        @mouseleave="stopRecording"
+        @mousedown="handleMouseDown"
+        @mouseup="handleMouseUp"
         :class="['button', 'record-button', { 'active': isRecording }]"
         :disabled="buttonsDisabled"
       >
@@ -49,6 +48,7 @@ export default {
       chunks: [],
       isPlayingAudio: false,
       buttonsDisabled: true,
+      mouseDownTime: 0,
     };
   },
 
@@ -288,6 +288,26 @@ export default {
         console.error('Failed to connect to server:', error);
         this.status = 'Failed to connect to server';
         this.$emit('connection-failed');
+      }
+    },
+
+    handleMouseDown() {
+      this.mouseDownTime = Date.now();
+      this.startRecording();
+    },
+
+    handleMouseUp() {
+      const mouseUpTime = Date.now();
+      const timeDiff = mouseUpTime - this.mouseDownTime;
+
+      if (timeDiff < 200) {  // Threshold for a "quick click"
+        if (this.isRecording) {
+          this.stopRecording();
+        } else {
+          setTimeout(() => this.stopRecording(), 1000);  // Record for 1 second on quick click
+        }
+      } else {
+        this.stopRecording();
       }
     },
   },
