@@ -36,33 +36,40 @@ export default {
 #conversation-log {
   flex: 1;
   width: 100%;
-  max-height: 70vh;
+  max-height: calc(100vh - 200px);
   overflow-y: auto;
   margin-bottom: 20px;
-  border: 1px solid #ddd;
-  padding: 10px;
-  border-radius: 5px;
+  border: 1px solid #e9ecef;
+  padding: 15px;
+  border-radius: 8px;
+  background-color: #f8f9fa;
 }
 
 .message-bubble {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  padding: 10px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .timestamp {
   font-weight: bold;
+  color: #6c757d;
 }
 
 .confirmed-text {
-  color: black;
+  color: #212529;
 }
 
 .unconfirmed-text {
-  color: gray;
+  color: #6c757d;
 }
 
 .warming-up-message {
   font-style: italic;
-  text-align: left;
-  color: #4a4a4a;
+  text-align: center;
+  color: #6c757d;
+  padding: 20px;
 }
 </style>

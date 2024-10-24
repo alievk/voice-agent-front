@@ -1,6 +1,6 @@
 <template>
   <div class="audio-streamer">
-    <div class="center-button">
+    <div class="button-container">
       <button 
         @mousedown="startRecording"
         @mouseup="stopRecording"
@@ -10,17 +10,17 @@
       >
         {{ isRecording ? 'Release to Send' : 'Hold to Talk' }}
       </button>
-    </div>
-    <div class="button-grid">
-      <button 
-        v-for="(audio, index) in audioFiles" 
-        :key="index" 
-        @click="() => toggleAudio(index)" 
-        :class="['button', 'play-button', { 'active': isPlaying[index] }]"
-        :disabled="buttonsDisabled"
-      >
-        {{ isPlaying[index] ? `Stop Audio ${index + 1}` : `Play Audio ${index + 1}` }}
-      </button>
+      <div class="play-buttons">
+        <button 
+          v-for="(audio, index) in audioFiles" 
+          :key="index" 
+          @click="() => toggleAudio(index)" 
+          :class="['button', 'play-button', { 'active': isPlaying[index] }]"
+          :disabled="buttonsDisabled"
+        >
+          {{ isPlaying[index] ? `Stop ${index + 1}` : `Play ${index + 1}` }}
+        </button>
+      </div>
     </div>
     <p class="status">{{ status }}</p>
   </div>
@@ -312,35 +312,37 @@ export default {
 
 <style scoped>
 .audio-streamer {
-  background-color: #f5f5f5;
-  border-radius: 8px;
+  background-color: #ffffff;
+  border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
 }
 
-.center-button {
+.button-container {
   display: flex;
-  justify-content: center;
-  margin-bottom: 16px;
-}
-
-.button-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
+  flex-direction: column;
+  align-items: center;
 }
 
 .button {
-  padding: 12px 16px;
+  padding: 10px 16px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  border: none;
-  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 20px; /* Increased border-radius for more rounded corners */
   transition: all 0.3s ease;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin: 5px;
+  background-color: #ffffff;
+  color: #333333;
+}
+
+.button:hover {
+  background-color: #f3f4f6;
 }
 
 .button:disabled {
@@ -349,27 +351,46 @@ export default {
 }
 
 .record-button {
-  background-color: #ff4136;
+  background-color: #ffffff;
+  color: #333333;
+  border-color: #e74c3c;
+}
+
+.record-button:hover {
+  background-color: #fff5f5;
+}
+
+.record-button.active {
+  background-color: #e74c3c;
   color: white;
 }
 
-.record-button:hover, .record-button.active {
-  background-color: #e60000;
+.play-buttons {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 10px;
 }
 
 .play-button {
-  background-color: #4CAF50;
+  background-color: #ffffff;
+  color: #333333;
+  border-color: #3498db;
+}
+
+.play-button:hover {
+  background-color: #f0f7ff;
+}
+
+.play-button.active {
+  background-color: #3498db;
   color: white;
 }
 
-.play-button:hover, .play-button.active {
-  background-color: #45a049;
-}
-
 .status {
-  font-size: 16px;
+  font-size: 14px;
   text-align: center;
-  color: #333;
-  margin-top: 12px;
+  color: #666666;
+  margin-top: 15px;
 }
 </style>

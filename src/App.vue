@@ -1,7 +1,7 @@
 <template>
-  <div class="container">
+  <div class="app-container">
     <Sidebar :actions="actions" />
-    <div class="main">
+    <div class="main-content">
       <ConversationLog :messages="messages" :isWarmingUp="isWarmingUp" />
       <AudioStreamer 
         @transcription-received="updateTranscription"
@@ -62,16 +62,22 @@ export default {
 }
 </script>
 
-<style scoped>
-.container {
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+}
+
+.app-container {
   display: flex;
   height: 100vh;
 }
 
-.main {
+.main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   padding: 20px;
+  background-color: #ffffff;
 }
 </style>
