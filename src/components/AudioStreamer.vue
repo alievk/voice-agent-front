@@ -4,20 +4,20 @@
       <button 
         @mousedown="handleMouseDown"
         @mouseup="handleMouseUp"
-        :class="['button', 'record-button', { 'active': isRecording }]"
+        :class="['button', 'record-button', { 'active': isRecordingUserAudio }]"
         :disabled="buttonsDisabled"
       >
-        {{ isRecording ? 'Release to Send' : 'Hold to Talk' }}
+        {{ isRecordingUserAudio ? 'Release to Send' : 'Hold to Talk' }}
       </button>
       <div class="play-buttons">
         <button 
-          v-for="(audio, index) in audioFiles" 
+          v-for="(audio, index) in userAudioFiles" 
           :key="index" 
-          @click="() => toggleAudio(index)" 
-          :class="['button', 'play-button', { 'active': isPlaying[index] }]"
+          @click="() => toggleUserAudio(index)" 
+          :class="['button', 'play-button', { 'active': isPlayingUserAudio[index] }]"
           :disabled="buttonsDisabled"
         >
-          {{ isPlaying[index] ? `Stop ${index + 1}` : `Play ${index + 1}` }}
+          {{ isPlayingUserAudio[index] ? `Stop ${index + 1}` : `Play ${index + 1}` }}
         </button>
       </div>
     </div>
@@ -29,32 +29,32 @@
 export default {
   data() {
     return {
-      isRecording: false,
-      isPlaying: [false, false, false],
+      isRecordingUserAudio: false,
+      isPlayingUserAudio: [false, false, false],
       socket: null,
-      mediaRecorder: null,
-      audioContext: null,
-      audioSource: null,
+      userAudioRecorder: null,
+      userAudioContext: null,
+      userAudioSource: null,
       status: 'Ready',
-      audioFiles: [
+      userAudioFiles: [
         'data/jfk_full.mp4',
         'data/what_is_strength.mp4',
         'data/virus_en.m4a'
       ],
-      currentAudioIndex: null,
-      mediaSource: null,
-      sourceBuffer: null,
-      audioElement: null,
-      chunks: [],
-      isPlayingAudio: false,
+      currentUserAudioIndex: null,
+      assistantAudioMediaSource: null,
+      assistantAudioSourceBuffer: null,
+      assistantAudioElement: null,
+      assistantAudioChunks: [],
+      isPlayingAssistantAudio: false,
       buttonsDisabled: true,
       mouseDownTime: 0,
     };
   },
 
   methods: {
-    async startRecording() {
-      if (this.isRecording) return;
+    async startRecordingUserAudio() {
+      if (this.isRecordingUserAudio) return;
       try {
         if (!this.isWebSocketConnected()) {
           await this.connectWebSocket();
@@ -63,14 +63,14 @@ export default {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: { sampleRate: 16000, channelCount: 1, echoCancellation: false, noiseSuppression: false }
         });
-        this.mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-        this.mediaRecorder.ondataavailable = (event) => {
+        this.userAudioRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+        this.userAudioRecorder.ondataavailable = (event) => {
           if (event.data.size > 0 && this.isWebSocketConnected()) {
             this.socket.send(event.data);
           }
         };
-        this.mediaRecorder.start(100);
-        this.isRecording = true;
+        this.userAudioRecorder.start(100);
+        this.isRecordingUserAudio = true;
         this.$emit('recording-started');
         this.socket.send('START_RECORDING');
       } catch (error) {
@@ -79,12 +79,12 @@ export default {
       }
     },
 
-    stopRecording() {
-      if (!this.isRecording) return;
-      if (this.mediaRecorder) {
-        this.mediaRecorder.stop();
-        this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
-        this.isRecording = false;
+    stopRecordingUserAudio() {
+      if (!this.isRecordingUserAudio) return;
+      if (this.userAudioRecorder) {
+        this.userAudioRecorder.stop();
+        this.userAudioRecorder.stream.getTracks().forEach(track => track.stop());
+        this.isRecordingUserAudio = false;
         if (this.isWebSocketConnected()) {
           this.socket.send('STOP_RECORDING');
         }
@@ -133,7 +133,7 @@ export default {
       if (metadata.type === 'audio') {
         const audioData = arrayBuffer.slice(4 + metadataLength);
         console.log('Received audio with id:', metadata.id, 'and length:', audioData.byteLength, 'bytes');
-        this.handleAudioData(audioData);
+        this.handleAssistantAudioData(audioData);
       }
       else if (metadata.type === 'message') {
         console.log('Received message:', metadata);
@@ -157,82 +157,82 @@ export default {
       }
     },
 
-    async toggleAudio(index) {
-      if (this.isPlaying[index]) {
-        this.stopPlayback();
+    async toggleUserAudio(index) {
+      if (this.isPlayingUserAudio[index]) {
+        this.stopUserAudioPlayback();
         if (this.isWebSocketConnected()) {
           this.socket.send('STOP_RECORDING');
         }
       } else {
-        await this.playAudio(index);
+        await this.playUserAudio(index);
       }
     },
 
-    async playAudio(index) {
-      if (this.isPlaying.some(playing => playing)) return;
+    async playUserAudio(index) {
+      if (this.isPlayingUserAudio.some(playing => playing)) return;
 
       try {
         if (!this.isWebSocketConnected()) {
           await this.connectWebSocket();
         }
         
-        const response = await fetch(process.env.BASE_URL + this.audioFiles[index]);
+        const response = await fetch(process.env.BASE_URL + this.userAudioFiles[index]);
         const arrayBuffer = await response.arrayBuffer();
 
-        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+        this.userAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const audioBuffer = await this.userAudioContext.decodeAudioData(arrayBuffer);
 
-        this.audioSource = this.audioContext.createBufferSource();
-        this.audioSource.buffer = audioBuffer;
-        this.audioSource.connect(this.audioContext.destination);
+        this.userAudioSource = this.userAudioContext.createBufferSource();
+        this.userAudioSource.buffer = audioBuffer;
+        this.userAudioSource.connect(this.userAudioContext.destination);
 
-        const streamDestination = this.audioContext.createMediaStreamDestination();
-        this.audioSource.connect(streamDestination);
+        const streamDestination = this.userAudioContext.createMediaStreamDestination();
+        this.userAudioSource.connect(streamDestination);
 
-        this.mediaRecorder = new MediaRecorder(streamDestination.stream, { mimeType: 'audio/webm' });
-        this.mediaRecorder.ondataavailable = (event) => {
+        this.userAudioRecorder = new MediaRecorder(streamDestination.stream, { mimeType: 'audio/webm' });
+        this.userAudioRecorder.ondataavailable = (event) => {
           if (event.data.size > 0 && this.isWebSocketConnected()) {
             this.socket.send(event.data);
           }
         };
 
-        this.mediaRecorder.start(100);
-        this.audioSource.start(0);
+        this.userAudioRecorder.start(100);
+        this.userAudioSource.start(0);
 
         this.socket.send('START_RECORDING');
 
-        this.audioSource.onended = () => {
+        this.userAudioSource.onended = () => {
           if (this.isWebSocketConnected()) {
             this.socket.send('STOP_RECORDING');
           }
         };
 
-        this.isPlaying[index] = true;
-        this.currentAudioIndex = index;
-        this.status = `Playing audio ${index + 1}`;
-        this.$emit('audio-playback-started', index);
+        this.isPlayingUserAudio[index] = true;
+        this.currentUserAudioIndex = index;
+        this.status = `Playing user audio ${index + 1}`;
+        this.$emit('user-audio-playback-started', index);
       } catch (error) {
-        console.error('Error playing audio:', error);
-        this.status = 'Error playing audio';
+        console.error('Error playing user audio:', error);
+        this.status = 'Error playing user audio';
       }
     },
 
-    stopPlayback() {
-      if (this.audioSource) {
-        this.audioSource.stop();
-        this.audioSource.disconnect();
-        this.audioSource = null;
+    stopUserAudioPlayback() {
+      if (this.userAudioSource) {
+        this.userAudioSource.stop();
+        this.userAudioSource.disconnect();
+        this.userAudioSource = null;
       }
-      if (this.mediaRecorder) {
-        this.mediaRecorder.stop();
-        this.mediaRecorder = null;
+      if (this.userAudioRecorder) {
+        this.userAudioRecorder.stop();
+        this.userAudioRecorder = null;
       }
-      if (this.audioContext && this.audioContext.state !== 'closed') {
-        this.audioContext.close().catch(console.error);
+      if (this.userAudioContext && this.userAudioContext.state !== 'closed') {
+        this.userAudioContext.close().catch(console.error);
       }
-      if (this.currentAudioIndex !== null) {
-        this.isPlaying[this.currentAudioIndex] = false;
-        this.currentAudioIndex = null;
+      if (this.currentUserAudioIndex !== null) {
+        this.isPlayingUserAudio[this.currentUserAudioIndex] = false;
+        this.currentUserAudioIndex = null;
       }
       this.status = 'Ready';
     },
@@ -241,41 +241,41 @@ export default {
       return this.socket && this.socket.readyState === WebSocket.OPEN;
     },
 
-    initializeMediaSource() {
-      this.mediaSource = new MediaSource();
-      this.audioElement = new Audio();
-      this.audioElement.src = URL.createObjectURL(this.mediaSource);
+    initializeAssistantAudioMediaSource() {
+      this.assistantAudioMediaSource = new MediaSource();
+      this.assistantAudioElement = new Audio();
+      this.assistantAudioElement.src = URL.createObjectURL(this.assistantAudioMediaSource);
 
-      this.mediaSource.addEventListener('sourceopen', () => {
-        this.sourceBuffer = this.mediaSource.addSourceBuffer('audio/webm; codecs="opus"');
-        this.sourceBuffer.mode = 'sequence';
-        this.sourceBuffer.addEventListener('updateend', this.appendNextChunk);
+      this.assistantAudioMediaSource.addEventListener('sourceopen', () => {
+        this.assistantAudioSourceBuffer = this.assistantAudioMediaSource.addSourceBuffer('audio/webm; codecs="opus"');
+        this.assistantAudioSourceBuffer.mode = 'sequence';
+        this.assistantAudioSourceBuffer.addEventListener('updateend', this.appendNextAssistantAudioChunk);
       });
     },
 
-    handleAudioData(chunk) {
-      if (!this.mediaSource) this.initializeMediaSource();
-      this.chunks.push(chunk);
-      if (!this.sourceBuffer || this.sourceBuffer.updating) return;
-      this.appendNextChunk();
+    handleAssistantAudioData(chunk) {
+      if (!this.assistantAudioMediaSource) this.initializeAssistantAudioMediaSource();
+      this.assistantAudioChunks.push(chunk);
+      if (!this.assistantAudioSourceBuffer || this.assistantAudioSourceBuffer.updating) return;
+      this.appendNextAssistantAudioChunk();
     },
 
-    appendNextChunk() {
-      if (this.chunks.length === 0 || this.sourceBuffer.updating) return;
-      const chunk = this.chunks.shift();
-      this.sourceBuffer.appendBuffer(chunk);
-      if (!this.isPlayingAudio) this.playReceivedAudio();
+    appendNextAssistantAudioChunk() {
+      if (this.assistantAudioChunks.length === 0 || this.assistantAudioSourceBuffer.updating) return;
+      const chunk = this.assistantAudioChunks.shift();
+      this.assistantAudioSourceBuffer.appendBuffer(chunk);
+      if (!this.isPlayingAssistantAudio) this.playAssistantAudio();
     },
 
-    async playReceivedAudio() {
-      if (this.isPlayingAudio) return;
+    async playAssistantAudio() {
+      if (this.isPlayingAssistantAudio) return;
       try {
-        await this.audioElement.play();
-        this.isPlayingAudio = true;
-        console.log('Audio playback started');
+        await this.assistantAudioElement.play();
+        this.isPlayingAssistantAudio = true;
+        console.log('Assistant audio playback started');
       } catch (error) {
-        console.error('Error playing audio:', error);
-        this.isPlayingAudio = false;
+        console.error('Error playing assistant audio:', error);
+        this.isPlayingAssistantAudio = false;
       }
     },
 
@@ -293,7 +293,7 @@ export default {
 
     handleMouseDown() {
       this.mouseDownTime = Date.now();
-      this.startRecording();
+      this.startRecordingUserAudio();
     },
 
     handleMouseUp() {
@@ -301,33 +301,33 @@ export default {
       const timeDiff = mouseUpTime - this.mouseDownTime;
 
       if (timeDiff < 200) {  // Threshold for a "quick click"
-        if (this.isRecording) {
-          this.stopRecording();
+        if (this.isRecordingUserAudio) {
+          this.stopRecordingUserAudio();
         } else {
-          setTimeout(() => this.stopRecording(), 1000);  // Record for 1 second on quick click
+          setTimeout(() => this.stopRecordingUserAudio(), 1000);  // Record for 1 second on quick click
         }
       } else {
-        this.stopRecording();
+        this.stopRecordingUserAudio();
       }
     },
   },
 
   mounted() {
-    this.initializeMediaSource();
+    this.initializeAssistantAudioMediaSource();
     this.initializeConnection();
   },
 
   beforeUnmount() {
-    if (this.mediaSource && this.mediaSource.readyState === 'open') {
-      this.mediaSource.endOfStream();
+    if (this.assistantAudioMediaSource && this.assistantAudioMediaSource.readyState === 'open') {
+      this.assistantAudioMediaSource.endOfStream();
     }
-    if (this.audioElement) {
-      URL.revokeObjectURL(this.audioElement.src);
-      this.audioElement.pause();
-      this.audioElement.src = '';
+    if (this.assistantAudioElement) {
+      URL.revokeObjectURL(this.assistantAudioElement.src);
+      this.assistantAudioElement.pause();
+      this.assistantAudioElement.src = '';
     }
-    this.stopRecording();
-    this.stopPlayback();
+    this.stopRecordingUserAudio();
+    this.stopUserAudioPlayback();
     this.disconnectWebSocket();
   },
 };
