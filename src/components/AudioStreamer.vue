@@ -1,13 +1,17 @@
 <template>
   <div class="audio-streamer">
-    <div class="button-grid">
+    <div class="center-button">
       <button 
-        @click="toggleRecording" 
+        @mousedown="startRecording"
+        @mouseup="stopRecording"
+        @mouseleave="stopRecording"
         :class="['button', 'record-button', { 'active': isRecording }]"
         :disabled="buttonsDisabled"
       >
-        {{ isRecording ? 'Stop Recording' : 'Start Recording' }}
+        {{ isRecording ? 'Release to Send' : 'Hold to Talk' }}
       </button>
+    </div>
+    <div class="button-grid">
       <button 
         v-for="(audio, index) in audioFiles" 
         :key="index" 
@@ -35,7 +39,7 @@ export default {
       status: 'Ready',
       audioFiles: [
         'data/jfk_full.mp4',
-        'data/officer_en.mp4',
+        'data/what_is_strength.mp4',
         'data/virus_en.m4a'
       ],
       currentAudioIndex: null,
@@ -49,15 +53,8 @@ export default {
   },
 
   methods: {
-    async toggleRecording() {
-      if (this.isRecording) {
-        this.stopRecording();
-      } else {
-        await this.startRecording();
-      }
-    },
-
     async startRecording() {
+      if (this.isRecording) return;
       try {
         if (!this.isWebSocketConnected()) {
           await this.connectWebSocket();
@@ -83,15 +80,14 @@ export default {
     },
 
     stopRecording() {
+      if (!this.isRecording) return;
       if (this.mediaRecorder) {
         this.mediaRecorder.stop();
         this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
         this.isRecording = false;
-        this.mediaRecorder.onstop = () => {
-          if (this.isWebSocketConnected()) {
-            this.socket.send('STOP_RECORDING');
-          }
-        };
+        if (this.isWebSocketConnected()) {
+          this.socket.send('STOP_RECORDING');
+        }
       }
     },
 
@@ -320,6 +316,12 @@ export default {
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.center-button {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
 }
 
 .button-grid {
