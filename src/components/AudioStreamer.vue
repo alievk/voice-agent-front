@@ -49,6 +49,9 @@ export default {
       isPlayingAssistantAudio: false,
       buttonsDisabled: true,
       mouseDownTime: 0,
+      lastAssistantSpeechId: null,
+      interruptSpeechId: null,
+      assistantAudioStartTime: null,
     };
   },
 
@@ -56,11 +59,9 @@ export default {
     async startRecordingUserAudio() {
       if (this.isRecordingUserAudio) return;
       try {
-        if (!this.isWebSocketConnected()) {
-          await this.connectWebSocket();
-        }
-
+        this.sendUserInterrupt();
         this.stopAssistantAudioPlayback();
+        this.sendStartRecordingMessage();
 
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: { sampleRate: 16000, channelCount: 1, echoCancellation: false, noiseSuppression: false }
@@ -74,7 +75,6 @@ export default {
         this.userAudioRecorder.start(100);
         this.isRecordingUserAudio = true;
         this.$emit('recording-started');
-        this.socket.send('START_RECORDING');
       } catch (error) {
         console.error('Error starting recording:', error);
         this.status = `Error: ${error.message}`;
@@ -83,13 +83,11 @@ export default {
 
     stopRecordingUserAudio() {
       if (!this.isRecordingUserAudio) return;
+      this.sendStopRecordingMessage();
       if (this.userAudioRecorder) {
         this.userAudioRecorder.stop();
         this.userAudioRecorder.stream.getTracks().forEach(track => track.stop());
         this.isRecordingUserAudio = false;
-        if (this.isWebSocketConnected()) {
-          this.socket.send('STOP_RECORDING');
-        }
       }
     },
 
@@ -134,8 +132,16 @@ export default {
 
       if (metadata.type === 'audio') {
         const audioData = arrayBuffer.slice(4 + metadataLength);
-        console.log('Received audio with id:', metadata.id, 'and length:', audioData.byteLength, 'bytes');
-        this.handleAssistantAudioData(audioData);
+        console.log('Received audio with speech id:', metadata.speech_id, 'and length:', audioData.byteLength, 'bytes');
+        if (this.interruptSpeechId !== metadata.speech_id) {
+          this.handleAssistantAudioData(audioData);
+        }
+        if (this.lastAssistantSpeechId !== metadata.speech_id) {
+          console.log('New assistant speech started');
+          this.assistantAudioStartTime = Date.now();
+          this.interruptSpeechId = null;
+        }
+        this.lastAssistantSpeechId = metadata.speech_id;
       }
       else if (metadata.type === 'message') {
         console.log('Received message:', metadata);
@@ -151,6 +157,20 @@ export default {
       }
     },
 
+    sendUserInterrupt() {
+      if (!this.assistantAudioStartTime) return;
+      const audioDuration = Date.now() - this.assistantAudioStartTime;
+      if (this.isWebSocketConnected()) {
+        const message = JSON.stringify({ 
+          type: 'interrupt',
+          speech_id: this.lastAssistantSpeechId,
+          interrupted_at_ms: audioDuration
+        });
+        this.socket.send(message);
+      }
+      this.interruptSpeechId = this.lastAssistantSpeechId;
+    },
+
     disconnectWebSocket() {
       if (this.socket) {
         this.socket.close(1000, "Normal closure");
@@ -162,9 +182,6 @@ export default {
     async toggleUserAudio(index) {
       if (this.isPlayingUserAudio[index]) {
         this.stopUserAudioPlayback();
-        if (this.isWebSocketConnected()) {
-          this.socket.send('STOP_RECORDING');
-        }
       } else {
         await this.playUserAudio(index);
       }
@@ -172,12 +189,8 @@ export default {
 
     async playUserAudio(index) {
       if (this.isPlayingUserAudio.some(playing => playing)) return;
-
+      this.sendStartRecordingMessage();
       try {
-        if (!this.isWebSocketConnected()) {
-          await this.connectWebSocket();
-        }
-        
         const response = await fetch(process.env.BASE_URL + this.userAudioFiles[index]);
         const arrayBuffer = await response.arrayBuffer();
 
@@ -201,12 +214,8 @@ export default {
         this.userAudioRecorder.start(100);
         this.userAudioSource.start(0);
 
-        this.socket.send('START_RECORDING');
-
         this.userAudioSource.onended = () => {
-          if (this.isWebSocketConnected()) {
-            this.socket.send('STOP_RECORDING');
-          }
+          this.sendStopRecordingMessage();
         };
 
         this.isPlayingUserAudio[index] = true;
@@ -220,6 +229,7 @@ export default {
     },
 
     stopUserAudioPlayback() {
+      this.sendStopRecordingMessage()
       if (this.userAudioSource) {
         this.userAudioSource.stop();
         this.userAudioSource.disconnect();
@@ -274,7 +284,6 @@ export default {
       try {
         await this.assistantAudioElement.play();
         this.isPlayingAssistantAudio = true;
-        console.log('Assistant audio playback started');
       } catch (error) {
         console.error('Error playing assistant audio:', error);
         this.isPlayingAssistantAudio = false;
@@ -297,6 +306,7 @@ export default {
       
       this.assistantAudioSourceBuffer = null;
       this.assistantAudioChunks = [];
+      this.assistantAudioStartTime = null;
       
       this.initializeAssistantAudioMediaSource();
     },
@@ -319,17 +329,26 @@ export default {
     },
 
     handleMouseUp() {
-      const mouseUpTime = Date.now();
-      const timeDiff = mouseUpTime - this.mouseDownTime;
+      const timeDiff = Date.now() - this.mouseDownTime;
 
-      if (timeDiff < 200) {  // Threshold for a "quick click"
-        if (this.isRecordingUserAudio) {
-          this.stopRecordingUserAudio();
-        } else {
-          setTimeout(() => this.stopRecordingUserAudio(), 1000);  // Record for 1 second on quick click
-        }
+      if (timeDiff < 200) { // Quick click
+        setTimeout(() => this.stopRecordingUserAudio(), 1000);
       } else {
         this.stopRecordingUserAudio();
+      }
+    },
+
+    sendStartRecordingMessage() {
+      if (this.isWebSocketConnected()) {
+        const message = JSON.stringify({ type: 'start_recording' });
+        this.socket.send(message);
+      }
+    },
+
+    sendStopRecordingMessage() {
+      if (this.isWebSocketConnected()) {
+        const message = JSON.stringify({ type: 'stop_recording' });
+        this.socket.send(message);
       }
     },
   },
