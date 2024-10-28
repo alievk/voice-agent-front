@@ -21,7 +21,6 @@
         </button>
       </div>
     </div>
-    <p class="status">{{ status }}</p>
   </div>
 </template>
 
@@ -35,7 +34,6 @@ export default {
       userAudioRecorder: null,
       userAudioContext: null,
       userAudioSource: null,
-      status: 'Ready',
       userAudioFiles: [
         'data/jfk_full.mp4',
         'data/what_is_strength.mp4',
@@ -446,12 +444,5 @@ export default {
 .play-button.active {
   background-color: #3498db;
   color: white;
-}
-
-.status {
-  font-size: 14px;
-  text-align: center;
-  color: #666666;
-  margin-top: 15px;
 }
 </style>
