@@ -3,9 +3,11 @@
     <Sidebar :actions="actions" />
     <div class="main-content">
       <ConversationLog :messages="messages" :isWarmingUp="isWarmingUp" />
+      <SystemOutput :systemMessages="systemMessages" />
       <AudioStreamer 
         @message-received="updateMessages"
         @connection-established="showWarmingUpMessage"
+        @system-message="addSystemMessage"
       />
     </div>
   </div>
@@ -15,18 +17,21 @@
 import Sidebar from './components/Sidebar.vue'
 import ConversationLog from './components/ConversationLog.vue'
 import AudioStreamer from './components/AudioStreamer.vue'
+import SystemOutput from './components/SystemOutput.vue'
 
 export default {
   components: {
     Sidebar,
     ConversationLog,
-    AudioStreamer
+    AudioStreamer,
+    SystemOutput
   },
   data() {
     return {
       messages: [],
       actions: [],
       isWarmingUp: false,
+      systemMessages: [],
     }
   },
   methods: {
@@ -56,6 +61,14 @@ export default {
 
     showWarmingUpMessage() {
       this.isWarmingUp = true;
+    },
+
+    addSystemMessage(message) {
+      this.systemMessages.push({
+        id: Date.now(),
+        content: message,
+        timestamp: Date.now()
+      });
     },
   },
 }

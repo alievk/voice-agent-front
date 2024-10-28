@@ -74,10 +74,9 @@ export default {
         };
         this.userAudioRecorder.start(100);
         this.isRecordingUserAudio = true;
-        this.$emit('recording-started');
+        this.$emit('system-message', 'Started recording user audio');
       } catch (error) {
         console.error('Error starting recording:', error);
-        this.status = `Error: ${error.message}`;
       }
     },
 
@@ -89,6 +88,7 @@ export default {
         this.userAudioRecorder.stream.getTracks().forEach(track => track.stop());
         this.isRecordingUserAudio = false;
       }
+      this.$emit('system-message', 'Stopped recording user audio');
     },
 
     async connectWebSocket() {
@@ -99,18 +99,18 @@ export default {
         this.socket = new WebSocket(wsUrl);
         
         this.socket.onopen = () => {
-          console.log('WebSocket connected successfully');
           resolve();
         };
         
         this.socket.onerror = (error) => {
           console.error('WebSocket connection error:', error);
-          this.status = 'Connection error';
+          this.$emit('system-message', 'Connection error');
           reject(error);
         };
         
         this.socket.onclose = (event) => {
           console.log('WebSocket connection closed:', event.code, event.reason);
+          this.$emit('system-message', 'WebSocket connection closed');
         };
 
         setTimeout(() => {
@@ -132,19 +132,18 @@ export default {
 
       if (metadata.type === 'audio') {
         const audioData = arrayBuffer.slice(4 + metadataLength);
-        console.log('Received audio with speech id:', metadata.speech_id, 'and length:', audioData.byteLength, 'bytes');
         if (this.interruptSpeechId !== metadata.speech_id) {
           this.handleAssistantAudioData(audioData);
         }
         if (this.lastAssistantSpeechId !== metadata.speech_id) {
-          console.log('New assistant speech started');
+          this.$emit('system-message', 'New assistant speech started');
           this.assistantAudioStartTime = Date.now();
           this.interruptSpeechId = null;
         }
         this.lastAssistantSpeechId = metadata.speech_id;
       }
       else if (metadata.type === 'message') {
-        console.log('Received message:', metadata);
+        this.$emit('system-message', `Received message from ${metadata.role}: ${metadata.content}`);
         this.$emit('message-received', {
           role: metadata.role,
           content: metadata.content,
@@ -220,11 +219,10 @@ export default {
 
         this.isPlayingUserAudio[index] = true;
         this.currentUserAudioIndex = index;
-        this.status = `Playing user audio ${index + 1}`;
-        this.$emit('user-audio-playback-started', index);
+        this.$emit('system-message', `Playing user audio ${index + 1}`);
       } catch (error) {
         console.error('Error playing user audio:', error);
-        this.status = 'Error playing user audio';
+        this.$emit('system-message', 'Error playing user audio');
       }
     },
 
@@ -246,7 +244,7 @@ export default {
         this.isPlayingUserAudio[this.currentUserAudioIndex] = false;
         this.currentUserAudioIndex = null;
       }
-      this.status = 'Ready';
+      this.$emit('system-message', 'Stopped playing user audio');
     },
 
     isWebSocketConnected() {
@@ -314,12 +312,11 @@ export default {
     async initializeConnection() {
       try {
         await this.connectWebSocket();
-        this.status = 'Connected to server';
+        this.$emit('system-message', 'Connected to server');
         this.$emit('connection-established');
       } catch (error) {
         console.error('Failed to connect to server:', error);
-        this.status = 'Failed to connect to server';
-        this.$emit('connection-failed');
+        this.$emit('system-message', 'Failed to connect to server');
       }
     },
 
