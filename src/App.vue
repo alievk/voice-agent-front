@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <Sidebar :actions="actions" />
+    <Sidebar @activate-agent="handleActivateAgent" />
     <div class="main-content">
       <ConversationLog :messages="messages" :isWarmingUp="isWarmingUp" />
       <SystemOutput :systemMessages="systemMessages" />
@@ -8,6 +8,7 @@
         @message-received="updateMessages"
         @connection-established="showWarmingUpMessage"
         @system-message="addSystemMessage"
+        :agentName="selectedAgent"
       />
     </div>
   </div>
@@ -29,9 +30,9 @@ export default {
   data() {
     return {
       messages: [],
-      actions: [],
       isWarmingUp: false,
       systemMessages: [],
+      selectedAgent: ''
     }
   },
   methods: {
@@ -70,6 +71,10 @@ export default {
         timestamp: Date.now()
       });
     },
+
+    handleActivateAgent(agentName) {
+      this.selectedAgent = agentName;
+    }
   },
 }
 </script>

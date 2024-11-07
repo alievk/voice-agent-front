@@ -41,6 +41,19 @@
 
 <script>
 export default {
+  props: {
+    agentName: {
+      type: String,
+      default: ''
+    }
+  },
+  watch: {
+    agentName(newAgentName) {
+      if (newAgentName && this.isWebSocketConnected()) {
+        this.activateAgent(newAgentName);
+      }
+    }
+  },
   data() {
     return {
       isRecordingUserAudio: false,
@@ -326,6 +339,7 @@ export default {
     async initializeConnection() {
       try {
         await this.connectWebSocket();
+        this.activateAgent(this.agentName);
         this.$emit('system-message', 'Connected to server');
         this.$emit('connection-established');
       } catch (error) {
@@ -373,6 +387,12 @@ export default {
       this.socket.send(message);
       this.$emit('system-message', `Sent text message: ${this.textMessage.trim()}`);
       this.textMessage = '';
+    },
+
+    activateAgent(agentName) {
+      if (!this.isWebSocketConnected()) return;
+      const message = JSON.stringify({ type: 'activate_agent', agent_name: agentName });
+      this.socket.send(message);
     },
   },
 
