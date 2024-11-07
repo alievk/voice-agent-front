@@ -20,6 +20,21 @@
           {{ isPlayingUserAudio[index] ? `Stop ${index + 1}` : `Play ${index + 1}` }}
         </button>
       </div>
+      <div class="text-input-container">
+        <input 
+          type="text" 
+          v-model="textMessage" 
+          placeholder="Type a message..."
+          @keyup.enter="sendTextMessage"
+        >
+        <button 
+          @click="sendTextMessage" 
+          :class="['button', 'send-button']"
+          :disabled="buttonsDisabled"
+        >
+          Send
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -50,6 +65,7 @@ export default {
       lastAssistantSpeechId: null,
       interruptSpeechId: null,
       assistantAudioStartTime: null,
+      textMessage: '',
     };
   },
 
@@ -346,6 +362,18 @@ export default {
         this.socket.send(message);
       }
     },
+
+    sendTextMessage() {
+      if (!this.textMessage.trim() || !this.isWebSocketConnected()) return;
+      
+      const message = JSON.stringify({
+        type: 'manual_text',
+        content: this.textMessage.trim()
+      });
+      this.socket.send(message);
+      this.$emit('system-message', `Sent text message: ${this.textMessage.trim()}`);
+      this.textMessage = '';
+    },
   },
 
   mounted() {
@@ -443,6 +471,37 @@ export default {
 
 .play-button.active {
   background-color: #3498db;
+  color: white;
+}
+
+.text-input-container {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 500px;
+  margin-top: 16px;
+}
+
+input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 20px;
+  font-size: 14px;
+}
+
+.send-button {
+  background-color: #ffffff;
+  color: #333333;
+  border-color: #2ecc71;
+}
+
+.send-button:hover {
+  background-color: #f0fff4;
+}
+
+.send-button:active {
+  background-color: #2ecc71;
   color: white;
 }
 </style>
