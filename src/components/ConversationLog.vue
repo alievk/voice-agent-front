@@ -1,7 +1,11 @@
 <template>
   <div id="conversation-log" ref="conversationLog">
     <div v-if="isWarmingUp" class="warming-up-message">Warming up the models...</div>
-    <div v-for="message in messages" :key="message.messageId" class="message-bubble">
+    <div 
+      v-for="message in messages" 
+      :key="message.messageId" 
+      :class="['message-bubble', message.role]"
+    >
       <span class="timestamp">[{{ message.timestamp }}] {{ message.role }}: </span>
       <span class="content">{{ message.content }}</span>
     </div>
@@ -66,5 +70,13 @@ export default {
   text-align: center;
   color: #6c757d;
   padding: 20px;
+}
+
+.message-bubble.assistant {
+  background-color: #ffffff;
+}
+
+.message-bubble.user {
+  background-color: #e8f5e9;
 }
 </style>
