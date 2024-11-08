@@ -49,9 +49,7 @@ export default {
   },
   watch: {
     agentName(newAgentName) {
-      if (newAgentName && this.isWebSocketConnected()) {
-        this.activateAgent(newAgentName);
-      }
+      this.reload(newAgentName);
     }
   },
   data() {
@@ -126,6 +124,7 @@ export default {
         this.socket = new WebSocket(wsUrl);
         
         this.socket.onopen = () => {
+          this.sendInitMessage();
           resolve();
         };
         
@@ -136,8 +135,9 @@ export default {
         };
         
         this.socket.onclose = (event) => {
-          console.log('WebSocket connection closed:', event.code, event.reason);
-          this.$emit('system-message', 'WebSocket connection closed');
+          const reason = this.getWebSocketCloseReason(event.code);
+          console.log(`WebSocket closed: ${reason}`);
+          this.$emit('system-message', `Connection closed: ${reason}`);
         };
 
         setTimeout(() => {
@@ -339,7 +339,6 @@ export default {
     async initializeConnection() {
       try {
         await this.connectWebSocket();
-        this.activateAgent(this.agentName);
         this.$emit('system-message', 'Connected to server');
         this.$emit('connection-established');
       } catch (error) {
@@ -389,30 +388,89 @@ export default {
       this.textMessage = '';
     },
 
-    activateAgent(agentName) {
+    sendInitMessage() {
       if (!this.isWebSocketConnected()) return;
-      const message = JSON.stringify({ type: 'activate_agent', agent_name: agentName });
+      const message = JSON.stringify({
+        type: 'init',
+        agent_name: this.agentName
+      });
+      console.log('sendInitMessage', message);
       this.socket.send(message);
+    },
+
+    reload(agentName) {
+      console.log('Reload with agent', agentName);
+
+      this.shutdown();
+      this.$emit('clean-messages');
+
+      this.initializeAssistantAudioMediaSource();
+      this.initializeConnection();
+    },
+
+    shutdown() {
+      // Clean up audio elements
+      if (this.assistantAudioMediaSource && this.assistantAudioMediaSource.readyState === 'open') {
+        this.assistantAudioMediaSource.endOfStream();
+      }
+      if (this.assistantAudioElement) {
+        URL.revokeObjectURL(this.assistantAudioElement.src);
+        this.assistantAudioElement.pause();
+        this.assistantAudioElement.src = '';
+      }
+      
+      // Stop all audio processes
+      this.stopRecordingUserAudio();
+      this.stopUserAudioPlayback();
+      this.disconnectWebSocket();
+
+      // Reset all state variables
+      this.isRecordingUserAudio = false;
+      this.isPlayingUserAudio = [false, false, false];
+      this.userAudioRecorder = null;
+      this.userAudioContext = null;
+      this.userAudioSource = null;
+      this.currentUserAudioIndex = null;
+      this.assistantAudioMediaSource = null;
+      this.assistantAudioSourceBuffer = null;
+      this.assistantAudioElement = null;
+      this.assistantAudioChunks = [];
+      this.isPlayingAssistantAudio = false;
+      this.buttonsDisabled = true;
+      this.mouseDownTime = 0;
+      this.lastAssistantSpeechId = null;
+      this.interruptSpeechId = null;
+      this.assistantAudioStartTime = null;
+      this.textMessage = '';
+    },
+
+    getWebSocketCloseReason(code) {
+      const codes = {
+        1000: 'Normal closure',
+        1001: 'Going away - client/server is disconnecting',
+        1002: 'Protocol error',
+        1003: 'Unsupported data',
+        1004: 'Reserved',
+        1005: 'No status received',
+        1006: 'Abnormal closure - connection dropped',
+        1007: 'Invalid frame payload data',
+        1008: 'Policy violation',
+        1009: 'Message too big',
+        1010: 'Mandatory extension missing',
+        1011: 'Internal server error',
+        1012: 'Service restart',
+        1013: 'Try again later',
+        1014: 'Bad gateway',
+        1015: 'TLS handshake failure'
+      };
+      return codes[code] || `Unknown code: ${code}`;
     },
   },
 
   mounted() {
-    this.initializeAssistantAudioMediaSource();
-    this.initializeConnection();
   },
 
   beforeUnmount() {
-    if (this.assistantAudioMediaSource && this.assistantAudioMediaSource.readyState === 'open') {
-      this.assistantAudioMediaSource.endOfStream();
-    }
-    if (this.assistantAudioElement) {
-      URL.revokeObjectURL(this.assistantAudioElement.src);
-      this.assistantAudioElement.pause();
-      this.assistantAudioElement.src = '';
-    }
-    this.stopRecordingUserAudio();
-    this.stopUserAudioPlayback();
-    this.disconnectWebSocket();
   },
 };
 </script>

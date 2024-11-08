@@ -3,13 +3,15 @@
     <Sidebar @activate-agent="handleActivateAgent" />
     <div class="main-content">
       <ConversationLog :messages="messages" :isWarmingUp="isWarmingUp" />
-      <SystemOutput :systemMessages="systemMessages" />
+      
       <AudioStreamer 
         @message-received="updateMessages"
         @connection-established="showWarmingUpMessage"
         @system-message="addSystemMessage"
+        @clean-messages="cleanMessages"
         :agentName="selectedAgent"
       />
+      <SystemOutput :systemMessages="systemMessages" />
     </div>
   </div>
 </template>
@@ -54,6 +56,10 @@ export default {
           messageId
         });
       }
+    },
+
+    cleanMessages() {
+      this.messages = [];
     },
 
     addAction(action) {
