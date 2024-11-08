@@ -1,6 +1,6 @@
 <template>
   <div class="audio-streamer">
-    <div class="button-container">
+    <div class="button-container fixed-height">
       <!-- iOS style switch -->
       <div class="switch-wrapper">
         <span class="switch-label">Audio</span>
@@ -15,45 +15,51 @@
         <span class="switch-label">Text</span>
       </div>
 
-      <div v-show="inputMode === 'audio'">
-        <button 
-          @mousedown="handleMouseDown"
-          @mouseup="handleMouseUp"
-          :class="['button', 'record-button', { 'active': isRecordingUserAudio }]"
-          :disabled="buttonsDisabled"
-        >
-          {{ isRecordingUserAudio ? 'Release to Send' : 'Hold to Talk' }}
-        </button>
-        <div class="play-buttons">
-          <button 
-            v-for="(audio, index) in userAudioFiles" 
-            :key="index" 
-            @click="() => toggleUserAudio(index)" 
-            :class="['button', 'play-button', { 'active': isPlayingUserAudio[index] }]"
-            :disabled="buttonsDisabled"
-          >
-            {{ isPlayingUserAudio[index] ? `Stop ${index + 1}` : `Play ${index + 1}` }}
-          </button>
+      <!-- Content area with fixed position -->
+      <div class="input-modes-container">
+        <!-- Audio mode -->
+        <div v-show="inputMode === 'audio'" class="mode-content">
+          <div class="audio-buttons">
+            <button 
+              @mousedown="handleMouseDown"
+              @mouseup="handleMouseUp"
+              :class="['button', 'record-button', { 'active': isRecordingUserAudio }]"
+              :disabled="buttonsDisabled"
+            >
+              {{ isRecordingUserAudio ? 'Release to Send' : 'Hold to Talk' }}
+            </button>
+            <div class="play-buttons">
+              <button 
+                v-for="(audio, index) in userAudioFiles" 
+                :key="index" 
+                @click="() => toggleUserAudio(index)" 
+                :class="['button', 'play-button', { 'active': isPlayingUserAudio[index] }]"
+                :disabled="buttonsDisabled"
+              >
+                {{ isPlayingUserAudio[index] ? `Stop ${index + 1}` : `Play ${index + 1}` }}
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div 
-        class="text-input-container"
-        v-show="inputMode === 'text'"
-      >
-        <input 
-          type="text" 
-          v-model="textMessage" 
-          placeholder="Type a message..."
-          @keyup.enter="sendTextMessage"
-        >
-        <button 
-          @click="sendTextMessage" 
-          :class="['button', 'send-button']"
-          :disabled="buttonsDisabled"
-        >
-          Send
-        </button>
+        <!-- Text mode -->
+        <div v-show="inputMode === 'text'" class="mode-content">
+          <div class="text-input-container">
+            <input 
+              type="text" 
+              v-model="textMessage" 
+              placeholder="Type a message..."
+              @keyup.enter="sendTextMessage"
+            >
+            <button 
+              @click="sendTextMessage" 
+              :class="['button', 'send-button']"
+              :disabled="buttonsDisabled"
+            >
+              Send
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -665,5 +671,41 @@ input:checked + .slider:before {
 /* Optional: hover effect */
 .slider:hover:before {
   box-shadow: 0 0 1px #34c759;
+}
+
+.fixed-height {
+  height: 200px; /* Adjust this value as needed */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.input-modes-container {
+  position: relative;
+  height: 120px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mode-content {
+  position: absolute;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.audio-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.text-input-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 </style>
