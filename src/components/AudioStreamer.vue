@@ -1,26 +1,46 @@
 <template>
   <div class="audio-streamer">
     <div class="button-container">
-      <button 
-        @mousedown="handleMouseDown"
-        @mouseup="handleMouseUp"
-        :class="['button', 'record-button', { 'active': isRecordingUserAudio }]"
-        :disabled="buttonsDisabled"
-      >
-        {{ isRecordingUserAudio ? 'Release to Send' : 'Hold to Talk' }}
-      </button>
-      <div class="play-buttons">
+      <!-- iOS style switch -->
+      <div class="switch-wrapper">
+        <span class="switch-label">Audio</span>
+        <label class="ios-switch">
+          <input 
+            type="checkbox"
+            :checked="inputMode === 'text'"
+            @change="inputMode = $event.target.checked ? 'text' : 'audio'"
+          >
+          <span class="slider"></span>
+        </label>
+        <span class="switch-label">Text</span>
+      </div>
+
+      <div v-show="inputMode === 'audio'">
         <button 
-          v-for="(audio, index) in userAudioFiles" 
-          :key="index" 
-          @click="() => toggleUserAudio(index)" 
-          :class="['button', 'play-button', { 'active': isPlayingUserAudio[index] }]"
+          @mousedown="handleMouseDown"
+          @mouseup="handleMouseUp"
+          :class="['button', 'record-button', { 'active': isRecordingUserAudio }]"
           :disabled="buttonsDisabled"
         >
-          {{ isPlayingUserAudio[index] ? `Stop ${index + 1}` : `Play ${index + 1}` }}
+          {{ isRecordingUserAudio ? 'Release to Send' : 'Hold to Talk' }}
         </button>
+        <div class="play-buttons">
+          <button 
+            v-for="(audio, index) in userAudioFiles" 
+            :key="index" 
+            @click="() => toggleUserAudio(index)" 
+            :class="['button', 'play-button', { 'active': isPlayingUserAudio[index] }]"
+            :disabled="buttonsDisabled"
+          >
+            {{ isPlayingUserAudio[index] ? `Stop ${index + 1}` : `Play ${index + 1}` }}
+          </button>
+        </div>
       </div>
-      <div class="text-input-container">
+
+      <div 
+        class="text-input-container"
+        v-show="inputMode === 'text'"
+      >
         <input 
           type="text" 
           v-model="textMessage" 
@@ -77,6 +97,7 @@ export default {
       interruptSpeechId: null,
       assistantAudioStartTime: null,
       textMessage: '',
+      inputMode: 'audio',
     };
   },
 
@@ -581,5 +602,68 @@ input {
 .send-button:active {
   background-color: #2ecc71;
   color: white;
+}
+
+.switch-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.switch-label {
+  font-size: 13px;
+  color: #666;
+}
+
+.ios-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 24px;
+}
+
+.ios-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #e9e9ea;
+  border-radius: 24px;
+  transition: .3s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  border-radius: 50%;
+  transition: .3s;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .slider {
+  background-color: #34c759;
+}
+
+input:checked + .slider:before {
+  transform: translateX(16px);
+}
+
+/* Optional: hover effect */
+.slider:hover:before {
+  box-shadow: 0 0 1px #34c759;
 }
 </style>
