@@ -17,8 +17,9 @@ export default {
   data() {
     return {
       agents: [
-        { name: 'Lustful Wife', description: 'A romantic and affectionate agent.' },
-        { name: 'Sarcastic Marv', description: 'A witty and sarcastic agent.' }
+        { name: 'Lovely Wife', description: 'A romantic and affectionate agent.' },
+        { name: 'Sarcastic Marv', description: 'A witty and sarcastic agent.' },
+        { name: 'Sex: Luna', description: 'A phone sex operator.' }
       ],
       selectedAgent: '',
       agentDescription: ''
