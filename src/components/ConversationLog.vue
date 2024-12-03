@@ -1,13 +1,13 @@
 <template>
   <div id="conversation-log" ref="conversationLog">
     <div v-if="isWarmingUp" class="warming-up-message">Warming up the models...</div>
-    <div 
-      v-for="message in messages" 
-      :key="message.messageId" 
-      :class="['message-bubble', message.role]"
-    >
-      <span class="timestamp">[{{ message.timestamp }}] {{ message.role }}: </span>
-      <span class="content">{{ message.content }}</span>
+    <div v-for="message in messages" :key="message.messageId">
+      <div :class="['message-meta', message.role]">
+        {{ message.timestamp }} • {{ message.role }}
+      </div>
+      <div :class="['message-bubble', message.role]">
+        <span class="content">{{ message.content }}</span>
+      </div>
     </div>
   </div>
 </template>
@@ -49,11 +49,13 @@ export default {
 }
 
 .message-bubble {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
   padding: 10px;
   background-color: #ffffff;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  max-width: 70%;
+  width: fit-content;
 }
 
 .timestamp {
@@ -75,9 +77,23 @@ export default {
 
 .message-bubble.assistant {
   background-color: #ffffff;
+  margin-right: auto;
 }
 
 .message-bubble.user {
   background-color: #e8f5e9;
+  margin-left: auto;
+}
+
+.message-meta {
+  font-size: 0.8em;
+  color: #6c757d;
+  margin-bottom: 4px;
+  padding: 0 10px;
+  text-align: left;
+}
+
+.message-meta.user {
+  text-align: right;
 }
 </style>
