@@ -62,6 +62,7 @@ export default {
 }
 
 .content {
+  white-space: pre-wrap;
   color: #212529;
 }
 
