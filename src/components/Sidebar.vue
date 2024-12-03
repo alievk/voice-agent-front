@@ -61,15 +61,18 @@ export default {
 
 <style scoped>
 .app-sidebar {
-  width: 500px;
+  width: 30%;
+  min-width: 300px;
+  max-width: 500px;
   background-color: #ffffff;
   padding: 30px;
   border-left: 1px solid #e9ecef;
-  height: 100vh;
+  max-height: 100vh;
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
   font-family: 'Arial', sans-serif;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
 }
 
 .sidebar-content {
