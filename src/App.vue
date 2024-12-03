@@ -1,6 +1,5 @@
 <template>
   <div class="app-container">
-    <Sidebar @activate-agent="handleActivateAgent" />
     <div class="main-content">
       <ConversationLog :messages="messages" :isWarmingUp="isWarmingUp" />
       
@@ -11,8 +10,11 @@
         @clean-messages="cleanMessages"
         :agentName="selectedAgent"
       />
-      <SystemOutput :systemMessages="systemMessages" />
     </div>
+    <Sidebar 
+      @activate-agent="handleActivateAgent" 
+      :systemMessages="systemMessages" 
+    />
   </div>
 </template>
 
@@ -20,14 +22,12 @@
 import Sidebar from './components/Sidebar.vue'
 import ConversationLog from './components/ConversationLog.vue'
 import AudioStreamer from './components/AudioStreamer.vue'
-import SystemOutput from './components/SystemOutput.vue'
 
 export default {
   components: {
     Sidebar,
     ConversationLog,
-    AudioStreamer,
-    SystemOutput
+    AudioStreamer
   },
   data() {
     return {
