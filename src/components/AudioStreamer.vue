@@ -69,6 +69,7 @@
 import { AudioFilePlayer } from '../services/AudioFilePlayer.js';
 import { AudioStreamPlayer } from '../services/AudioStreamPlayer.js';
 import { AudioRecorder } from '../services/AudioRecorder.js';
+import { WebSocketManager } from '../services/WebSocketManager.js';
 
 export default {
   props: {
@@ -86,7 +87,6 @@ export default {
     return {
       isRecordingUserAudio: false,
       isPlayingUserAudio: [false, false, false],
-      socket: null,
       userAudioFiles: [
         'data/jfk_full.mp4',
         'data/what_is_strength.mp4',
@@ -99,6 +99,8 @@ export default {
       audioFilePlayer: new AudioFilePlayer(),
       audioStreamPlayer: new AudioStreamPlayer(),
       audioRecorder: new AudioRecorder(),
+      webSocketManager: new WebSocketManager(),
+      buttonsDisabled: true
     };
   },
 
@@ -108,11 +110,10 @@ export default {
       try {
         this.sendUserInterrupt();
         this.audioStreamPlayer.stop();
-        this.sendStartRecordingMessage();
-
+        this.webSocketManager.sendJson({ type: 'start_recording' });
         const success = await this.audioRecorder.start((event) => {
-          if (event.data.size > 0 && this.isWebSocketConnected()) {
-            this.socket.send(event.data);
+          if (event.data.size > 0) {
+            this.webSocketManager.send(event.data);
           }
         });
 
@@ -127,99 +128,64 @@ export default {
 
     stopRecordingUserAudio() {
       if (!this.isRecordingUserAudio) return;
-      this.sendStopRecordingMessage();
+      this.webSocketManager.sendJson({ type: 'stop_recording' });
       this.audioRecorder.stop();
       this.isRecordingUserAudio = false;
       this.$emit('system-message', 'Stopped recording user audio');
     },
 
-    async connectWebSocket() {
-      if (this.isWebSocketConnected()) return;
-      
-      return new Promise((resolve, reject) => {
-        const wsUrl = `wss://${window.location.hostname}:8765`;
-        this.socket = new WebSocket(wsUrl);
-        
-        this.socket.onopen = () => {
-          this.sendInitMessage();
-          resolve();
-        };
-        
-        this.socket.onerror = (error) => {
-          console.error('WebSocket connection error:', error);
-          this.$emit('system-message', 'Connection error');
-          reject(error);
-        };
-        
-        this.socket.onclose = (event) => {
-          const reason = this.getWebSocketCloseReason(event.code);
-          console.log(`WebSocket closed: ${reason}`);
-          this.$emit('system-message', `Connection closed: ${reason}`);
-        };
-
-        setTimeout(() => {
-          if (!this.isWebSocketConnected()) {
-            reject(new Error('WebSocket connection timed out'));
-          }
-        }, 5000);
-        
-        this.socket.onmessage = this.handleWebSocketMessage;
-      });
+    async initializeConnection() {
+      try {
+        this.webSocketManager.onAudioMessage = this.handleAudioMessage;
+        this.webSocketManager.onJsonMessage = this.handleJsonMessage;
+        this.webSocketManager.onSystemMessage = (msg) => this.$emit('system-message', msg);
+        await this.webSocketManager.connect(window.location.hostname);
+        this.sendInitMessage();
+        this.$emit('system-message', 'Connected to server');
+        this.$emit('connection-established');
+      } catch (error) {
+        console.error('Failed to connect to server:', error);
+        this.$emit('system-message', 'Failed to connect to server');
+      }
     },
 
-    async handleWebSocketMessage(event) {
-      this.buttonsDisabled = false;
-      const arrayBuffer = await event.data.arrayBuffer();
-      const dataView = new DataView(arrayBuffer);
-      const metadataLength = dataView.getUint32(0);
-      const metadata = JSON.parse(new TextDecoder().decode(arrayBuffer.slice(4, 4 + metadataLength)));
+    handleAudioMessage(audioData, metadata) {
+      if (this.interruptSpeechId !== metadata.speech_id) {
+        this.audioStreamPlayer.handleAudioData(audioData);
+      }
+      if (this.lastAssistantSpeechId !== metadata.speech_id) {
+        this.$emit('system-message', 'New assistant speech started');
+        this.assistantAudioStartTime = Date.now();
+        this.interruptSpeechId = null;
+      }
+      this.lastAssistantSpeechId = metadata.speech_id;
+    },
 
-      if (metadata.type === 'audio') {
-        const audioData = arrayBuffer.slice(4 + metadataLength);
-        if (this.interruptSpeechId !== metadata.speech_id) {
-          this.handleAssistantAudioData(audioData);
-        }
-        if (this.lastAssistantSpeechId !== metadata.speech_id) {
-          this.$emit('system-message', 'New assistant speech started');
-          this.assistantAudioStartTime = Date.now();
-          this.interruptSpeechId = null;
-        }
-        this.lastAssistantSpeechId = metadata.speech_id;
-      }
-      else if (metadata.type === 'message') {
-        this.$emit('system-message', `Received message from ${metadata.role}: ${metadata.content}`);
-        this.$emit('message-received', {
-          role: metadata.role,
-          content: metadata.content,
-          timestamp: metadata.time,
-          messageId: metadata.id
-        });
-      }
-      else {
-        console.error('Unknown message type:', metadata.type);
-      }
+    handleJsonMessage(metadata) {
+      this.$emit('system-message', `Received message from ${metadata.role}: ${metadata.content}`);
+      this.$emit('message-received', {
+        role: metadata.role,
+        content: metadata.content,
+        timestamp: metadata.time,
+        messageId: metadata.id
+      });
+      this.buttonsDisabled = false;
     },
 
     sendUserInterrupt() {
       if (!this.assistantAudioStartTime) return;
       const audioDuration = Date.now() - this.assistantAudioStartTime;
-      if (this.isWebSocketConnected()) {
-        const message = JSON.stringify({ 
-          type: 'interrupt',
-          speech_id: this.lastAssistantSpeechId,
-          interrupted_at_ms: audioDuration
-        });
-        this.socket.send(message);
-      }
+      const message = JSON.stringify({ 
+        type: 'interrupt',
+        speech_id: this.lastAssistantSpeechId,
+        interrupted_at_ms: audioDuration
+      });
+      this.webSocketManager.send(message);
       this.interruptSpeechId = this.lastAssistantSpeechId;
     },
 
     disconnectWebSocket() {
-      if (this.socket) {
-        this.socket.close(1000, "Normal closure");
-        this.socket = null;
-        console.log('WebSocket disconnected');
-      }
+      this.webSocketManager.disconnect();
     },
 
     async toggleUserAudio(index) {
@@ -232,15 +198,15 @@ export default {
 
     async playUserAudio(index) {
       if (this.isPlayingUserAudio.some(playing => playing)) return;
-      this.sendStartRecordingMessage();
+      this.webSocketManager.sendJson({ type: 'start_recording' });
       try {
         const audioUrl = process.env.BASE_URL + this.userAudioFiles[index];
         await this.audioFilePlayer.play(audioUrl, (event) => {
-          if (event.data.size > 0 && this.isWebSocketConnected()) {
-            this.socket.send(event.data);
+          if (event.data.size > 0) {
+            this.webSocketManager.send(event.data);
           }
         }, () => {
-          this.sendStopRecordingMessage();
+          this.webSocketManager.sendJson({ type: 'stop_recording' });
           this.isPlayingUserAudio[index] = false;
           this.currentUserAudioIndex = null;
           this.$emit('system-message', `Stopped playing user audio ${index + 1}`);
@@ -256,7 +222,7 @@ export default {
     },
 
     stopUserAudioPlayback() {
-      this.sendStopRecordingMessage();
+      this.webSocketManager.sendJson({ type: 'stop_recording' });
       this.audioFilePlayer.stop();
       if (this.currentUserAudioIndex !== null) {
         this.isPlayingUserAudio[this.currentUserAudioIndex] = false;
@@ -265,29 +231,10 @@ export default {
       this.$emit('system-message', 'Stopped playing user audio');
     },
 
-    isWebSocketConnected() {
-      return this.socket && this.socket.readyState === WebSocket.OPEN;
-    },
-
-    handleAssistantAudioData(chunk) {
-      this.audioStreamPlayer.handleAudioData(chunk);
-    },
-
     stopAssistantAudioPlayback() {
       this.audioStreamPlayer.stop();
       this.audioStreamPlayer.initialize();
       this.assistantAudioStartTime = null;
-    },
-
-    async initializeConnection() {
-      try {
-        await this.connectWebSocket();
-        this.$emit('system-message', 'Connected to server');
-        this.$emit('connection-established');
-      } catch (error) {
-        console.error('Failed to connect to server:', error);
-        this.$emit('system-message', 'Failed to connect to server');
-      }
     },
 
     handleMouseDown() {
@@ -305,40 +252,21 @@ export default {
       }
     },
 
-    sendStartRecordingMessage() {
-      if (this.isWebSocketConnected()) {
-        const message = JSON.stringify({ type: 'start_recording' });
-        this.socket.send(message);
-      }
-    },
-
-    sendStopRecordingMessage() {
-      if (this.isWebSocketConnected()) {
-        const message = JSON.stringify({ type: 'stop_recording' });
-        this.socket.send(message);
-      }
-    },
-
     sendTextMessage() {
-      if (!this.textMessage.trim() || !this.isWebSocketConnected()) return;
-      
-      const message = JSON.stringify({
+      if (!this.textMessage.trim()) return;
+      this.webSocketManager.sendJson({
         type: 'manual_text',
         content: this.textMessage.trim()
       });
-      this.socket.send(message);
       this.$emit('system-message', `Sent text message: ${this.textMessage.trim()}`);
       this.textMessage = '';
     },
 
     sendInitMessage() {
-      if (!this.isWebSocketConnected()) return;
-      const message = JSON.stringify({
+      this.webSocketManager.sendJson({
         type: 'init',
         agent_name: this.agentName
       });
-      console.log('sendInitMessage', message);
-      this.socket.send(message);
     },
 
     reload(agentName) {
@@ -366,6 +294,7 @@ export default {
       this.currentUserAudioIndex = null;
       this.assistantAudioStartTime = null;
       this.textMessage = '';
+      this.buttonsDisabled = true;
     },
 
     getWebSocketCloseReason(code) {
