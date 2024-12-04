@@ -24,7 +24,7 @@
               @mousedown="handleMouseDown"
               @mouseup="handleMouseUp"
               :class="['button', 'record-button', { 'active': isRecordingUserAudio }]"
-              :disabled="buttonsDisabled"
+              :disabled="!buttonsEnabled"
             >
               {{ isRecordingUserAudio ? 'Release to Send' : 'Hold to Talk' }}
             </button>
@@ -34,7 +34,7 @@
                 :key="index" 
                 @click="() => toggleUserAudio(index)" 
                 :class="['button', 'play-button', { 'active': isPlayingUserAudio[index] }]"
-                :disabled="buttonsDisabled"
+                :disabled="!buttonsEnabled"
               >
                 {{ isPlayingUserAudio[index] ? `Stop ${index + 1}` : `Play ${index + 1}` }}
               </button>
@@ -54,7 +54,7 @@
             <button 
               @click="sendTextMessage" 
               :class="['button', 'send-button']"
-              :disabled="buttonsDisabled"
+              :disabled="!buttonsEnabled"
             >
               Send
             </button>
@@ -71,7 +71,7 @@ export default {
     isRecordingUserAudio: Boolean,
     isPlayingUserAudio: Array,
     inputMode: String,
-    buttonsDisabled: Boolean,
+    buttonsEnabled: Boolean,
     userAudioFiles: {
       type: Array,
       default: () => []

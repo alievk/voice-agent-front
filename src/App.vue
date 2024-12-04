@@ -7,7 +7,7 @@
         :isRecordingUserAudio="isRecordingUserAudio"
         :isPlayingUserAudio="isPlayingUserAudio"
         :inputMode="inputMode"
-        :buttonsDisabled="!isReady"
+        :buttonsEnabled="isReady"
         :userAudioFiles="userAudioFiles"
         @start-recording="startRecordingUserAudio"
         @stop-recording="stopRecordingUserAudio"
@@ -112,7 +112,7 @@ export default {
       this.selectedAgent = agentName;
       this.disconnect();
       this.cleanMessages();
-      this.connectWebSocket();
+      this.connect();
     },
 
     handleAudioMessage(audioData, metadata) {
@@ -136,6 +136,7 @@ export default {
         messageId: metadata.id
       });
       this.$emit('connection-established');
+      this.isReady = true; // TODO: we need a special message from the server to know that the connection is established
     },
 
     async connect() {
@@ -146,7 +147,6 @@ export default {
           agent_name: this.selectedAgent
         });
         this.addSystemMessage('Connected to server');
-        this.isReady = true;
       } catch (error) {
         console.error('Failed to connect to server:', error);
         this.addSystemMessage('Failed to connect to server');
@@ -156,6 +156,7 @@ export default {
     disconnect() {
       this.audioStreamPlayer.stop();
       this.webSocketManager.disconnect();
+      this.isReady = false;
     },
 
     async startRecordingUserAudio() {
