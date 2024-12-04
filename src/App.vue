@@ -1,7 +1,10 @@
 <template>
   <div class="app-container">
     <div class="main-content">
-      <ConversationLog :messages="messages" :isWarmingUp="isWarmingUp" />
+      <ConversationLog 
+        :messages="messages" 
+        :isWarmingUp="!isReady" 
+      />
       
       <AudioStreamer 
         :isRecordingUserAudio="isRecordingUserAudio"
@@ -44,7 +47,6 @@ export default {
   data() {
     return {
       messages: [],
-      isWarmingUp: false,
       systemMessages: [],
       selectedAgent: '',
       webSocketManager: new WebSocketManager(),
@@ -71,10 +73,6 @@ export default {
     updateMessages(data) {
       const { role, content, timestamp, messageId } = data;
 
-      if (this.isWarmingUp) {
-        this.isWarmingUp = false;
-      }
-
       const existingMessageIndex = this.messages.findIndex(m => m.messageId === messageId);
       if (existingMessageIndex !== -1) {
         this.messages[existingMessageIndex] = { ...this.messages[existingMessageIndex], ...data };
@@ -90,10 +88,6 @@ export default {
 
     cleanMessages() {
       this.messages = [];
-    },
-
-    showWarmingUpMessage() {
-      this.isWarmingUp = true;
     },
 
     addSystemMessage(message) {
