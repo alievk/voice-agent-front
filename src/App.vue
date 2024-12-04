@@ -92,10 +92,6 @@ export default {
       this.messages = [];
     },
 
-    addAction(action) {
-      this.actions.push(action);
-    },
-
     showWarmingUpMessage() {
       this.isWarmingUp = true;
     },
