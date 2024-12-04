@@ -6,7 +6,7 @@
         :isWarmingUp="!isReady" 
       />
       
-      <AudioStreamer 
+      <MessageInput 
         :isRecordingUserAudio="isRecordingUserAudio"
         :isPlayingUserAudio="isPlayingUserAudio"
         :inputMode="inputMode"
@@ -32,7 +32,7 @@
 <script>
 import Sidebar from './components/Sidebar.vue'
 import ConversationLog from './components/ConversationLog.vue'
-import AudioStreamer from './components/AudioStreamer.vue'
+import MessageInput from './components/MessageInput.vue'
 import { WebSocketManager } from './services/WebSocketManager.js'
 import { AudioFilePlayer } from './services/AudioFilePlayer.js';
 import { AudioStreamPlayer } from './services/AudioStreamPlayer.js';
@@ -42,7 +42,7 @@ export default {
   components: {
     Sidebar,
     ConversationLog,
-    AudioStreamer
+    MessageInput
   },
   data() {
     return {
