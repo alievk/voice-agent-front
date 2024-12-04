@@ -45,7 +45,7 @@ export default {
     ConversationLog,
     MessageInput
   },
-  
+
   data() {
     return {
       messages: [],
@@ -256,6 +256,7 @@ export default {
         { name: 'Luna: Sex Phone Operator', description: 'A phone sex operator ready to talk about anything.' },
         { name: 'Lovely Wife', description: 'A romantic and affectionate agent.' },
         { name: 'Sarcastic Marv', description: 'A witty and sarcastic agent.' },
+        { name: 'STT Test', description: 'A test agent to test the STT.' },
       ];
     }
   },
