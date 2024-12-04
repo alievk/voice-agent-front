@@ -4,8 +4,6 @@
       <ConversationLog :messages="messages" :isWarmingUp="isWarmingUp" />
       
       <AudioStreamer 
-        :agentName="selectedAgent"
-        :isReady="isReady"
         :isRecordingUserAudio="isRecordingUserAudio"
         :isPlayingUserAudio="isPlayingUserAudio"
         :inputMode="inputMode"
@@ -20,6 +18,7 @@
         @clean-messages="cleanMessages"
       />
     </div>
+
     <Sidebar 
       @activate-agent="handleActivateAgent" 
       :systemMessages="systemMessages" 
@@ -111,7 +110,7 @@ export default {
 
     handleActivateAgent(agentName) {
       this.selectedAgent = agentName;
-      this.disconnectWebSocket();
+      this.disconnect();
       this.cleanMessages();
       this.connectWebSocket();
     },
@@ -139,7 +138,7 @@ export default {
       this.$emit('connection-established');
     },
 
-    async connectWebSocket() {
+    async connect() {
       try {
         await this.webSocketManager.connect(window.location.hostname);
         this.webSocketManager.sendJson({
@@ -154,7 +153,8 @@ export default {
       }
     },
 
-    disconnectWebSocket() {
+    disconnect() {
+      this.audioStreamPlayer.stop();
       this.webSocketManager.disconnect();
     },
 

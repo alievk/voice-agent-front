@@ -68,8 +68,6 @@
 <script>
 export default {
   props: {
-    agentName: String,
-    isReady: Boolean,
     isRecordingUserAudio: Boolean,
     isPlayingUserAudio: Array,
     inputMode: String,
