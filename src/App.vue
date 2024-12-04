@@ -24,7 +24,8 @@
 
     <Sidebar 
       @activate-agent="handleActivateAgent" 
-      :systemMessages="systemMessages" 
+      :systemMessages="systemMessages"
+      :agents="agents"
     />
   </div>
 </template>
@@ -44,6 +45,7 @@ export default {
     ConversationLog,
     MessageInput
   },
+  
   data() {
     return {
       messages: [],
@@ -62,13 +64,15 @@ export default {
       lastAssistantSpeechId: null,
       userAudioFiles: ["data/jfk_full.mp4", "data/what_is_strength.mp4", "data/virus_en.m4a"],
       inputMode: 'audio',
+      agents: [],
     }
   },
+
   mounted() {
-    this.webSocketManager.onAudioMessage = this.handleAudioMessage;
-    this.webSocketManager.onJsonMessage = this.handleJsonMessage;
-    this.webSocketManager.onSystemMessage = this.addSystemMessage;
+    this.agents = this.fetchAgents();
+    this.handleActivateAgent(this.agents[0].name);
   },
+
   methods: {
     updateMessages(data) {
       const { role, content, timestamp, messageId } = data;
@@ -131,7 +135,10 @@ export default {
 
     async connect() {
       try {
-        await this.webSocketManager.connect(window.location.hostname);
+        await this.webSocketManager.connect(window.location.hostname)
+        this.webSocketManager.onAudioMessage = this.handleAudioMessage;
+        this.webSocketManager.onJsonMessage = this.handleJsonMessage;
+        this.webSocketManager.onSystemMessage = this.addSystemMessage;
         this.webSocketManager.sendJson({
           type: 'init',
           agent_name: this.selectedAgent
@@ -241,6 +248,16 @@ export default {
       }
       this.$emit('system-message', 'Stopped playing user audio');
     },
+
+    fetchAgents() {
+      // Simulated API call
+      return [
+        { name: 'Meeting at the bar', description: 'You meet a girl at the bar and she invites you to her place.' },
+        { name: 'Luna: Sex Phone Operator', description: 'A phone sex operator ready to talk about anything.' },
+        { name: 'Lovely Wife', description: 'A romantic and affectionate agent.' },
+        { name: 'Sarcastic Marv', description: 'A witty and sarcastic agent.' },
+      ];
+    }
   },
 }
 </script>

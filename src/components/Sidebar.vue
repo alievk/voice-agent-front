@@ -19,43 +19,51 @@ import SystemOutput from './SystemOutput.vue'
 
 export default {
   name: 'AppSidebar',
+  
   components: {
     SystemOutput
   },
+
   props: {
     systemMessages: {
       type: Array,
       required: true
+    },
+    agents: {
+      type: Array,
+      required: true
     }
   },
+
   data() {
     return {
-      agents: [
-        { name: 'Meeting at the bar', description: 'You meet a girl at the bar and she invites you to her place.' },
-        { name: 'Luna: Sex Phone Operator', description: 'A phone sex operator ready to talk about anything.' },
-        { name: 'Lovely Wife', description: 'A romantic and affectionate agent.' },
-        { name: 'Sarcastic Marv', description: 'A witty and sarcastic agent.' },
-      ],
       selectedAgent: '',
       agentDescription: ''
     };
   },
-  created() {
-    this.selectedAgent = this.agents[0].name;
-    this.agentDescription = this.agents[0].description;
+
+  watch: {
+    agents: {
+      handler(newAgents) {
+        if (newAgents && newAgents.length > 0) {
+          this.selectedAgent = newAgents[0].name;
+          this.agentDescription = newAgents[0].description;
+        }
+      },
+      immediate: true
+    }
   },
-  mounted() {
-    this.activateAgent();
-  },
+
   methods: {
     updateDescription() {
       const agent = this.agents.find(agent => agent.name === this.selectedAgent);
       this.agentDescription = agent ? agent.description : '';
     },
+
     activateAgent() {
       this.$emit('activate-agent', this.selectedAgent);
     }
-  }
+  },
 };
 </script>
 
