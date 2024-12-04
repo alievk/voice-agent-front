@@ -1,5 +1,5 @@
 <template>
-  <div class="audio-streamer">
+  <div class="audio-streamer" ref="audioStreamer">
     <div class="button-container fixed-height">
       <!-- iOS style switch -->
       <div class="switch-wrapper">
@@ -8,7 +8,7 @@
           <input 
             type="checkbox"
             :checked="inputMode === 'text'"
-            @change="inputMode = $event.target.checked ? 'text' : 'audio'"
+            @change="$emit('input-mode-change', $event.target.checked ? 'text' : 'audio')"
           >
           <span class="slider"></span>
         </label>
@@ -66,266 +66,51 @@
 </template>
 
 <script>
-import { AudioFilePlayer } from '../services/AudioFilePlayer.js';
-import { AudioStreamPlayer } from '../services/AudioStreamPlayer.js';
-import { AudioRecorder } from '../services/AudioRecorder.js';
-import { WebSocketManager } from '../services/WebSocketManager.js';
-
 export default {
   props: {
-    agentName: {
-      type: String,
-      default: ''
-    }
-  },
-  watch: {
-    agentName(newAgentName) {
-      this.reload(newAgentName);
+    agentName: String,
+    isReady: Boolean,
+    isRecordingUserAudio: Boolean,
+    isPlayingUserAudio: Array,
+    inputMode: String,
+    buttonsDisabled: Boolean,
+    userAudioFiles: {
+      type: Array,
+      default: () => []
     }
   },
   data() {
     return {
-      isRecordingUserAudio: false,
-      isPlayingUserAudio: [false, false, false],
-      userAudioFiles: [
-        'data/jfk_full.mp4',
-        'data/what_is_strength.mp4',
-        'data/virus_en.m4a'
-      ],
-      currentUserAudioIndex: null,
-      assistantAudioStartTime: null,
       textMessage: '',
-      inputMode: 'audio',
-      audioFilePlayer: new AudioFilePlayer(),
-      audioStreamPlayer: new AudioStreamPlayer(),
-      audioRecorder: new AudioRecorder(),
-      webSocketManager: new WebSocketManager(),
-      buttonsDisabled: true
-    };
+      mouseDownTime: null
+    }
   },
-
   methods: {
-    async startRecordingUserAudio() {
-      if (this.isRecordingUserAudio) return;
-      try {
-        this.sendUserInterrupt();
-        this.audioStreamPlayer.stop();
-        this.webSocketManager.sendJson({ type: 'start_recording' });
-        const success = await this.audioRecorder.start((event) => {
-          if (event.data.size > 0) {
-            this.webSocketManager.send(event.data);
-          }
-        });
-
-        if (success) {
-          this.isRecordingUserAudio = true;
-          this.$emit('system-message', 'Started recording user audio');
-        }
-      } catch (error) {
-        console.error('Error starting recording:', error);
-      }
-    },
-
-    stopRecordingUserAudio() {
-      if (!this.isRecordingUserAudio) return;
-      this.webSocketManager.sendJson({ type: 'stop_recording' });
-      this.audioRecorder.stop();
-      this.isRecordingUserAudio = false;
-      this.$emit('system-message', 'Stopped recording user audio');
-    },
-
-    async initializeConnection() {
-      try {
-        this.webSocketManager.onAudioMessage = this.handleAudioMessage;
-        this.webSocketManager.onJsonMessage = this.handleJsonMessage;
-        this.webSocketManager.onSystemMessage = (msg) => this.$emit('system-message', msg);
-        await this.webSocketManager.connect(window.location.hostname);
-        this.sendInitMessage();
-        this.$emit('system-message', 'Connected to server');
-        this.$emit('connection-established');
-      } catch (error) {
-        console.error('Failed to connect to server:', error);
-        this.$emit('system-message', 'Failed to connect to server');
-      }
-    },
-
-    handleAudioMessage(audioData, metadata) {
-      if (this.interruptSpeechId !== metadata.speech_id) {
-        this.audioStreamPlayer.handleAudioData(audioData);
-      }
-      if (this.lastAssistantSpeechId !== metadata.speech_id) {
-        this.$emit('system-message', 'New assistant speech started');
-        this.assistantAudioStartTime = Date.now();
-        this.interruptSpeechId = null;
-      }
-      this.lastAssistantSpeechId = metadata.speech_id;
-    },
-
-    handleJsonMessage(metadata) {
-      this.$emit('system-message', `Received message from ${metadata.role}: ${metadata.content}`);
-      this.$emit('message-received', {
-        role: metadata.role,
-        content: metadata.content,
-        timestamp: metadata.time,
-        messageId: metadata.id
-      });
-      this.buttonsDisabled = false;
-    },
-
-    sendUserInterrupt() {
-      if (!this.assistantAudioStartTime) return;
-      const audioDuration = Date.now() - this.assistantAudioStartTime;
-      const message = JSON.stringify({ 
-        type: 'interrupt',
-        speech_id: this.lastAssistantSpeechId,
-        interrupted_at_ms: audioDuration
-      });
-      this.webSocketManager.send(message);
-      this.interruptSpeechId = this.lastAssistantSpeechId;
-    },
-
-    disconnectWebSocket() {
-      this.webSocketManager.disconnect();
-    },
-
-    async toggleUserAudio(index) {
-      if (this.isPlayingUserAudio[index]) {
-        this.stopUserAudioPlayback();
-      } else {
-        await this.playUserAudio(index);
-      }
-    },
-
-    async playUserAudio(index) {
-      if (this.isPlayingUserAudio.some(playing => playing)) return;
-      this.webSocketManager.sendJson({ type: 'start_recording' });
-      try {
-        const audioUrl = process.env.BASE_URL + this.userAudioFiles[index];
-        await this.audioFilePlayer.play(audioUrl, (event) => {
-          if (event.data.size > 0) {
-            this.webSocketManager.send(event.data);
-          }
-        }, () => {
-          this.webSocketManager.sendJson({ type: 'stop_recording' });
-          this.isPlayingUserAudio[index] = false;
-          this.currentUserAudioIndex = null;
-          this.$emit('system-message', `Stopped playing user audio ${index + 1}`);
-        });
-
-        this.isPlayingUserAudio[index] = true;
-        this.currentUserAudioIndex = index;
-        this.$emit('system-message', `Playing user audio ${index + 1}`);
-      } catch (error) {
-        console.error('Error playing user audio:', error);
-        this.$emit('system-message', 'Error playing user audio');
-      }
-    },
-
-    stopUserAudioPlayback() {
-      this.webSocketManager.sendJson({ type: 'stop_recording' });
-      this.audioFilePlayer.stop();
-      if (this.currentUserAudioIndex !== null) {
-        this.isPlayingUserAudio[this.currentUserAudioIndex] = false;
-        this.currentUserAudioIndex = null;
-      }
-      this.$emit('system-message', 'Stopped playing user audio');
-    },
-
-    stopAssistantAudioPlayback() {
-      this.audioStreamPlayer.stop();
-      this.audioStreamPlayer.initialize();
-      this.assistantAudioStartTime = null;
-    },
-
     handleMouseDown() {
       this.mouseDownTime = Date.now();
-      this.startRecordingUserAudio();
+      this.$emit('start-recording');
     },
 
     handleMouseUp() {
       const timeDiff = Date.now() - this.mouseDownTime;
-
-      if (timeDiff < 200) { // Quick click
-        setTimeout(() => this.stopRecordingUserAudio(), 1000);
+      if (timeDiff < 200) {
+        setTimeout(() => this.$emit('stop-recording'), 1000);
       } else {
-        this.stopRecordingUserAudio();
+        this.$emit('stop-recording');
       }
     },
 
     sendTextMessage() {
       if (!this.textMessage.trim()) return;
-      this.webSocketManager.sendJson({
-        type: 'manual_text',
-        content: this.textMessage.trim()
-      });
-      this.$emit('system-message', `Sent text message: ${this.textMessage.trim()}`);
+      this.$emit('send-text', this.textMessage.trim());
       this.textMessage = '';
     },
 
-    sendInitMessage() {
-      this.webSocketManager.sendJson({
-        type: 'init',
-        agent_name: this.agentName
-      });
-    },
-
-    reload(agentName) {
-      console.log('Reload with agent', agentName);
-
-      this.shutdown();
-      this.$emit('clean-messages');
-
-      this.audioStreamPlayer.initialize();
-      this.initializeConnection();
-    },
-
-    shutdown() {
-      // Clean up audio elements
-      this.audioStreamPlayer.stop();
-
-      // Stop all audio processes
-      this.stopRecordingUserAudio();
-      this.stopUserAudioPlayback();
-      this.disconnectWebSocket();
-
-      // Reset all state variables
-      this.isRecordingUserAudio = false;
-      this.isPlayingUserAudio = [false, false, false];
-      this.currentUserAudioIndex = null;
-      this.assistantAudioStartTime = null;
-      this.textMessage = '';
-      this.buttonsDisabled = true;
-    },
-
-    getWebSocketCloseReason(code) {
-      const codes = {
-        1000: 'Normal closure',
-        1001: 'Going away - client/server is disconnecting',
-        1002: 'Protocol error',
-        1003: 'Unsupported data',
-        1004: 'Reserved',
-        1005: 'No status received',
-        1006: 'Abnormal closure - connection dropped',
-        1007: 'Invalid frame payload data',
-        1008: 'Policy violation',
-        1009: 'Message too big',
-        1010: 'Mandatory extension missing',
-        1011: 'Internal server error',
-        1012: 'Service restart',
-        1013: 'Try again later',
-        1014: 'Bad gateway',
-        1015: 'TLS handshake failure'
-      };
-      return codes[code] || `Unknown code: ${code}`;
-    },
-  },
-
-  mounted() {
-  },
-
-  beforeUnmount() {
-  },
-};
+    toggleUserAudio(index) {
+      this.$emit('toggle-user-audio', index);
+    }
+  }
+}
 </script>
 
 <style scoped>
