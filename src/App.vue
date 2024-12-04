@@ -38,6 +38,7 @@ import { WebSocketManager } from './services/WebSocketManager.js'
 import { AudioFilePlayer } from './services/AudioFilePlayer.js';
 import { AudioStreamPlayer } from './services/AudioStreamPlayer.js';
 import { AudioRecorder } from './services/AudioRecorder.js';
+import { AssistantSpeechTracker } from './services/AssistantSpeechTracker.js';
 
 export default {
   components: {
@@ -59,12 +60,10 @@ export default {
       isRecordingUserAudio: false,
       isPlayingUserAudio: [false, false, false],
       currentUserAudioIndex: null,
-      assistantAudioStartTime: null,
-      interruptSpeechId: null,
-      lastAssistantSpeechId: null,
       userAudioFiles: ["data/jfk_full.mp4", "data/what_is_strength.mp4", "data/virus_en.m4a"],
       inputMode: 'audio',
       agents: [],
+      speechTracker: new AssistantSpeechTracker(),
     }
   },
 
@@ -110,15 +109,13 @@ export default {
     },
 
     handleAudioMessage(audioData, metadata) {
-      if (this.interruptSpeechId !== metadata.speech_id) {
+      if (this.speechTracker.shouldPlayAudio(metadata.speech_id)) {
         this.audioStreamPlayer.handleAudioData(audioData);
       }
-      if (this.lastAssistantSpeechId !== metadata.speech_id) {
+      if (this.speechTracker.lastSpeechId !== metadata.speech_id) {
         this.addSystemMessage('New assistant speech started');
-        this.assistantAudioStartTime = Date.now();
-        this.interruptSpeechId = null;
+        this.speechTracker.startNewSpeech(metadata.speech_id);
       }
-      this.lastAssistantSpeechId = metadata.speech_id;
     },
 
     handleJsonMessage(metadata) {
@@ -151,6 +148,7 @@ export default {
     },
 
     disconnect() {
+      this.speechTracker.reset();
       this.audioStreamPlayer.stop();
       this.webSocketManager.disconnect();
       this.isReady = false;
@@ -196,14 +194,14 @@ export default {
     },
 
     sendUserInterrupt() {
-      if (!this.assistantAudioStartTime) return;
-      const audioDuration = Date.now() - this.assistantAudioStartTime;
+      const interruptData = this.speechTracker.interrupt();
+      if (!interruptData) return;
+      
       this.webSocketManager.sendJson({ 
         type: 'interrupt',
-        speech_id: this.lastAssistantSpeechId,
-        interrupted_at_ms: audioDuration
+        speech_id: interruptData.speechId,
+        interrupted_at_ms: interruptData.interruptedAtMs
       });
-      this.interruptSpeechId = this.lastAssistantSpeechId;
     },
 
     async toggleUserAudio(index) {
