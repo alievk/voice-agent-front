@@ -3,14 +3,14 @@
     <div class="main-content">
       <ConversationLog 
         :messages="messages" 
-        :isWarmingUp="!isReady" 
+        :showWarmingUpMessage="!isAgentReady" 
       />
       
       <MessageInput 
         :isRecordingUserAudio="isRecordingUserAudio"
         :isPlayingUserAudio="isPlayingUserAudio"
         :inputMode="inputMode"
-        :buttonsEnabled="isReady"
+        :buttonsEnabled="isAgentReady"
         :userAudioFiles="userAudioFiles"
         @start-recording="startRecordingUserAudio"
         @stop-recording="stopRecordingUserAudio"
@@ -53,7 +53,7 @@ export default {
       systemMessages: [],
       selectedAgent: '',
       webSocketManager: new WebSocketManager(),
-      isReady: false,
+      isAgentReady: false,
       audioFilePlayer: new AudioFilePlayer(),
       audioStreamPlayer: new AudioStreamPlayer(),
       audioRecorder: new AudioRecorder(),
@@ -127,7 +127,7 @@ export default {
         messageId: metadata.id
       });
       this.$emit('connection-established');
-      this.isReady = true; // TODO: we need a special message from the server to know that the connection is established
+      this.isAgentReady = true; // TODO: we need a special message from the server to know that the connection is established
     },
 
     async connect() {
@@ -151,7 +151,7 @@ export default {
       this.speechTracker.reset();
       this.audioStreamPlayer.stop();
       this.webSocketManager.disconnect();
-      this.isReady = false;
+      this.isAgentReady = false;
     },
 
     async startRecordingUserAudio() {
