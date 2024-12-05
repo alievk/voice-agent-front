@@ -3,14 +3,16 @@
     <div class="main-content">
       <ConversationLog 
         :messages="messages" 
-        :isWarmingUp="!isReady" 
+        :isWarmingUp="!isAgentReady" 
       />
       
+      <!-- связать isReady из App.vue с buttonsEnabled в MessageInput.vue -->
+      <!-- на событие @start-recording вызывается функция startRecordingUserAudio -->
       <MessageInput 
         :isRecordingUserAudio="isRecordingUserAudio"
         :isPlayingUserAudio="isPlayingUserAudio"
         :inputMode="inputMode"
-        :buttonsEnabled="isReady"
+        :buttonsEnabled="isAgentReady"
         :userAudioFiles="userAudioFiles"
         @start-recording="startRecordingUserAudio"
         @stop-recording="stopRecordingUserAudio"
@@ -53,7 +55,7 @@ export default {
       systemMessages: [],
       selectedAgent: '',
       webSocketManager: new WebSocketManager(),
-      isReady: false,
+      isAgentReady: false, // true когда сервер загрузил веса агента и готов обмениваться сообщениями
       audioFilePlayer: new AudioFilePlayer(),
       audioStreamPlayer: new AudioStreamPlayer(),
       audioRecorder: new AudioRecorder(),
@@ -102,6 +104,8 @@ export default {
     },
 
     handleActivateAgent(agentName) {
+      // агент это AI бот с определенными характеристиками
+      // эта функция вызывается при выборе агента в sidebar и при первой загрузке страницы
       this.selectedAgent = agentName;
       this.disconnect();
       this.cleanMessages();
@@ -109,6 +113,7 @@ export default {
     },
 
     handleAudioMessage(audioData, metadata) {
+      // принимает на вход кусочек аудио в формате webm (стриминг)
       if (this.speechTracker.shouldPlayAudio(metadata.speech_id)) {
         this.audioStreamPlayer.handleAudioData(audioData);
       }
@@ -126,13 +131,14 @@ export default {
         timestamp: metadata.time,
         messageId: metadata.id
       });
-      this.$emit('connection-established');
-      this.isReady = true; // TODO: we need a special message from the server to know that the connection is established
+      // this.$emit('connection-established');
+      this.isAgentReady = true; // TODO: we need a special message from the server to know that the connection is established
     },
 
     async connect() {
       try {
         await this.webSocketManager.connect(window.location.hostname)
+        // bind на выход
         this.webSocketManager.onAudioMessage = this.handleAudioMessage;
         this.webSocketManager.onJsonMessage = this.handleJsonMessage;
         this.webSocketManager.onSystemMessage = this.addSystemMessage;
@@ -151,7 +157,7 @@ export default {
       this.speechTracker.reset();
       this.audioStreamPlayer.stop();
       this.webSocketManager.disconnect();
-      this.isReady = false;
+      this.isAgentReady = false;
     },
 
     async startRecordingUserAudio() {
@@ -190,7 +196,7 @@ export default {
         type: 'manual_text',
         content: textMessage
       });
-      this.$emit('system-message', `Sent text message: ${textMessage}`);
+      // this.$emit('system-message', `Sent text message: ${textMessage}`);
     },
 
     sendUserInterrupt() {
@@ -213,6 +219,7 @@ export default {
     },
 
     async playUserAudio(index) {
+      // воспроизведение захардкоженных аудио файлов для тестов speech-to-text  
       if (this.isPlayingUserAudio.some(playing => playing)) return;
       this.webSocketManager.sendJson({ type: 'start_recording' });
       try {
@@ -238,17 +245,19 @@ export default {
     },
 
     stopUserAudioPlayback() {
+      // остановка воспроизведения аудио файлов для тестов speech-to-text
       this.webSocketManager.sendJson({ type: 'stop_recording' });
       this.audioFilePlayer.stop();
       if (this.currentUserAudioIndex !== null) {
         this.isPlayingUserAudio[this.currentUserAudioIndex] = false;
         this.currentUserAudioIndex = null;
       }
-      this.$emit('system-message', 'Stopped playing user audio');
+      // this.$emit('system-message', 'Stopped playing user audio');
     },
 
     fetchAgents() {
       // Simulated API call
+      // name это ключ для выбора агента
       return [
         { name: 'Meeting at the bar', description: 'You meet a girl at the bar and she invites you to her place.' },
         { name: 'Luna: Sex Phone Operator', description: 'A phone sex operator ready to talk about anything.' },

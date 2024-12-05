@@ -12,6 +12,7 @@ export class AssistantSpeechTracker {
   }
 
   startNewSpeech(speechId) {
+    // эта хуйня нужна чтобы скалькулировать на какой длине аудио фрагмент был прерван
     this.audioStartTime = Date.now();
     this.interruptId = null;
     this.lastSpeechId = speechId;
