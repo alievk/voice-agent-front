@@ -1,6 +1,6 @@
 <template>
   <div id="conversation-log" ref="conversationLog">
-    <div v-if="isWarmingUp" class="warming-up-message">Warming up the models...</div>
+    <div v-if="showWarmingUpMessage" class="warming-up-message">Warming up the models...</div>
     <div v-for="message in messages" :key="message.messageId">
       <div :class="['message-meta', message.role]">
         {{ message.timestamp }} • {{ message.role }}
@@ -14,7 +14,7 @@
 
 <script>
 export default {
-  props: ['messages', 'isWarmingUp'],
+  props: ['messages', 'showWarmingUpMessage'],
   methods: {
     scrollToBottom() {
       this.$nextTick(() => {

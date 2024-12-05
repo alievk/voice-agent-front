@@ -3,7 +3,7 @@
     <div class="main-content">
       <ConversationLog 
         :messages="messages" 
-        :isWarmingUp="!isAgentReady" 
+        :showWarmingUpMessage="!isAgentReady" 
       />
       
       <!-- связать isReady из App.vue с buttonsEnabled в MessageInput.vue -->
