@@ -1,6 +1,11 @@
 <template>
   <div id="conversation-log" ref="conversationLog">
-    <div v-if="showWarmingUpMessage" class="warming-up-message">Warming up the models...</div>
+    <div v-if="agentState === 'unselected'" class="status-message">
+      Agent not activated
+    </div>
+    <div v-else-if="agentState === 'initializing'" class="status-message">
+      Agent initialization...
+    </div>
     <div v-for="message in messages" :key="message.messageId">
       <div :class="['message-meta', message.role]">
         {{ message.timestamp }} • {{ message.role }}
@@ -14,7 +19,14 @@
 
 <script>
 export default {
-  props: ['messages', 'showWarmingUpMessage'],
+  props: {
+    messages: Array,
+    agentState: {
+      type: String,
+      validator: (value) => ['unselected', 'initializing', 'ready'].includes(value),
+      default: 'unselected'
+    }
+  },
   methods: {
     scrollToBottom() {
       this.$nextTick(() => {
@@ -68,7 +80,7 @@ export default {
   color: #212529;
 }
 
-.warming-up-message {
+.status-message {
   font-style: italic;
   text-align: center;
   color: #6c757d;

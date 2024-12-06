@@ -3,14 +3,14 @@
     <div class="main-content">
       <ConversationLog 
         :messages="messages" 
-        :showWarmingUpMessage="!isAgentReady" 
+        :agentState="agentState"
       />
       
       <MessageInput 
         :isRecordingUserAudio="isRecordingUserAudio"
         :isPlayingUserAudio="isPlayingUserAudio"
         :inputMode="inputMode"
-        :buttonsEnabled="isAgentReady"
+        :buttonsEnabled="agentState === 'ready'"
         :userAudioFiles="userAudioFiles"
         @start-recording="startRecordingUserAudio"
         @stop-recording="stopRecordingUserAudio"
@@ -53,7 +53,7 @@ export default {
       systemMessages: [],
       selectedAgent: '',
       webSocketManager: new WebSocketManager(),
-      isAgentReady: false,
+      agentState: 'unselected',
       audioFilePlayer: new AudioFilePlayer(),
       audioStreamPlayer: new AudioStreamPlayer(),
       audioRecorder: new AudioRecorder(),
@@ -69,7 +69,6 @@ export default {
 
   mounted() {
     this.agents = this.fetchAgents();
-    this.handleActivateAgent(this.agents[0].name);
   },
 
   methods: {
@@ -105,6 +104,7 @@ export default {
       this.selectedAgent = agentName;
       this.disconnect();
       this.cleanMessages();
+      this.agentState = 'initializing';
       this.connect();
     },
 
@@ -127,7 +127,7 @@ export default {
         messageId: metadata.id
       });
       this.$emit('connection-established');
-      this.isAgentReady = true; // TODO: we need a special message from the server to know that the connection is established
+      this.agentState = "ready"; // TODO: we need a special message from the server to know that the connection is established
     },
 
     async connect() {
@@ -154,7 +154,7 @@ export default {
       this.speechTracker.reset();
       this.audioStreamPlayer.stop();
       this.webSocketManager.disconnect();
-      this.isAgentReady = false;
+      this.agentState = 'unselected';
     },
 
     async startRecordingUserAudio() {
