@@ -11,7 +11,7 @@ module.exports = defineConfig({
         cert: fs.readFileSync(path.join(__dirname, 'localhost+2.pem')),
       }
     },
-    host: '0.0.0.0',
+    host: '127.0.0.1',
     port: 8501,
     allowedHosts: 'all'
   }
