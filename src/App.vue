@@ -137,7 +137,10 @@ export default {
 
     async connect() {
       try {
-        await this.webSocketManager.connect(window.location.hostname)
+        await this.webSocketManager.connect(
+          process.env.VUE_APP_WS_HOST || "localhost",
+          process.env.VUE_APP_WS_PORT || 8564
+        )
         // bind на выход
         this.webSocketManager.onAudioMessage = this.handleAudioMessage;
         this.webSocketManager.onJsonMessage = this.handleJsonMessage;

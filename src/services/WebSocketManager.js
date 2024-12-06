@@ -5,11 +5,11 @@ export class WebSocketManager {
   onAudioMessage = null;
   onJsonMessage = null;
 
-  connect = async (hostname) => {
+  connect = async (hostname, port) => {
     if (this.isConnected()) return;
 
     return new Promise((resolve, reject) => {
-      const wsUrl = `wss://${hostname}:8765`;
+      const wsUrl = `wss://${hostname}:${port}`;
       this.socket = new WebSocket(wsUrl);
 
       this.socket.onopen = () => {
