@@ -180,10 +180,11 @@ export default {
 
     stopRecordingUserAudio() {
       if (!this.isRecordingUserAudio) return;
-      this.webSocketManager.sendJson({ type: 'stop_recording' });
-      this.audioRecorder.stop();
-      this.isRecordingUserAudio = false;
-      this.addSystemMessage('Stopped recording user audio');
+      this.audioRecorder.stop(() => {
+        this.webSocketManager.sendJson({ type: 'stop_recording' });
+        this.isRecordingUserAudio = false;
+        this.addSystemMessage('Stopped recording user audio');
+      });
     },
 
     sendTextMessage(message) {

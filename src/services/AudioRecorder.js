@@ -28,10 +28,11 @@ export class AudioRecorder {
       }
     }
   
-    stop() {
+    stop(onStopCallback) {
       if (!this.isRecording) return;
       
       if (this.recorder) {
+        this.recorder.onstop = onStopCallback;
         this.recorder.stop();
         this.recorder.stream.getTracks().forEach(track => track.stop());
         this.isRecording = false;
