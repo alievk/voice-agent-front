@@ -36,8 +36,8 @@ import ConversationLog from './components/ConversationLog.vue'
 import MessageInput from './components/MessageInput.vue'
 import { WebSocketManager } from './services/WebSocketManager.js'
 import { AudioFilePlayer } from './services/AudioFilePlayer.js';
-import { AudioStreamPlayer } from './services/AudioStreamPlayer.js';
-import { AudioRecorder } from './services/AudioRecorder.js';
+import { WavStreamPlayer } from '/src/lib/wavtools/index.js';
+import { WavRecorder } from '/src/lib/wavtools/index.js';
 import { AssistantSpeechTracker } from './services/AssistantSpeechTracker.js';
 
 export default {
@@ -55,8 +55,8 @@ export default {
       webSocketManager: new WebSocketManager(),
       agentState: 'unselected',
       audioFilePlayer: new AudioFilePlayer(),
-      audioStreamPlayer: new AudioStreamPlayer(),
-      audioRecorder: new AudioRecorder(),
+      audioStreamPlayer: new WavStreamPlayer({ sampleRate: 24000 }),
+      audioRecorder: new WavRecorder({ sampleRate: 16000 }),
       isRecordingUserAudio: false,
       isPlayingUserAudio: [false, false, false],
       currentUserAudioIndex: null,
@@ -69,6 +69,7 @@ export default {
 
   mounted() {
     this.agents = this.fetchAgents();
+    this.audioStreamPlayer.connect();
   },
 
   methods: {
@@ -110,7 +111,7 @@ export default {
 
     handleAudioMessage(audioData, metadata) {
       if (this.speechTracker.shouldPlayAudio(metadata.speech_id)) {
-        this.audioStreamPlayer.handleAudioData(audioData);
+        this.audioStreamPlayer.add16BitPCM(audioData, `speech_${metadata.speech_id}`);
       }
       if (this.speechTracker.lastSpeechId !== metadata.speech_id) {
         this.addSystemMessage('New assistant speech started');
@@ -152,7 +153,7 @@ export default {
 
     disconnect() {
       this.speechTracker.reset();
-      this.audioStreamPlayer.stop();
+      this.audioStreamPlayer.interrupt();
       this.webSocketManager.disconnect();
       this.agentState = 'unselected';
     },
@@ -161,15 +162,18 @@ export default {
       if (this.isRecordingUserAudio) return;
       try {
         this.sendUserInterrupt();
-        this.audioStreamPlayer.stop();
+        this.audioStreamPlayer.interrupt();
         this.webSocketManager.sendJson({ type: 'start_recording' });
-        const success = await this.audioRecorder.start((event) => {
-          if (event.data.size > 0) {
-            this.webSocketManager.send(event.data);
+        await this.audioRecorder.begin();
+        await this.audioRecorder.begin();
+        await this.audioRecorder.record(
+          (data) => {
+            this.webSocketManager.send(data.mono);
           }
-        });
+        );
 
-        if (success) {
+        // if (success) {
+        if (this.audioRecorder.getStatus() === 'recording') {
           this.isRecordingUserAudio = true;
           this.addSystemMessage('Started recording user audio');
         }
@@ -178,13 +182,12 @@ export default {
       }
     },
 
-    stopRecordingUserAudio() {
+    async stopRecordingUserAudio() {
       if (!this.isRecordingUserAudio) return;
-      this.audioRecorder.stop(() => {
-        this.webSocketManager.sendJson({ type: 'stop_recording' });
-        this.isRecordingUserAudio = false;
-        this.addSystemMessage('Stopped recording user audio');
-      });
+      await this.audioRecorder.end();
+      this.webSocketManager.sendJson({ type: 'stop_recording' });
+      this.isRecordingUserAudio = false;
+      this.addSystemMessage('Stopped recording user audio');
     },
 
     sendTextMessage(message) {
