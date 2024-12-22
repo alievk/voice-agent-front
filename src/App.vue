@@ -110,13 +110,7 @@ export default {
     },
 
     handleAudioMessage(audioData, metadata) {
-      if (this.speechTracker.shouldPlayAudio(metadata.speech_id)) {
-        this.audioStreamPlayer.add16BitPCM(audioData, `speech_${metadata.speech_id}`);
-      }
-      if (this.speechTracker.lastSpeechId !== metadata.speech_id) {
-        this.addSystemMessage('New assistant speech started');
-        this.speechTracker.startNewSpeech(metadata.speech_id);
-      }
+      this.audioStreamPlayer.add16BitPCM(audioData, metadata.speech_id);
     },
 
     handleJsonMessage(metadata) {
@@ -161,10 +155,10 @@ export default {
     async startRecordingUserAudio() {
       if (this.isRecordingUserAudio) return;
       try {
-        this.sendUserInterrupt();
-        this.audioStreamPlayer.interrupt();
+        await this.sendUserInterrupt();
+
         this.webSocketManager.sendJson({ type: 'start_recording' });
-        await this.audioRecorder.begin();
+
         await this.audioRecorder.begin();
         await this.audioRecorder.record(
           (data) => {
@@ -172,7 +166,6 @@ export default {
           }
         );
 
-        // if (success) {
         if (this.audioRecorder.getStatus() === 'recording') {
           this.isRecordingUserAudio = true;
           this.addSystemMessage('Started recording user audio');
@@ -200,14 +193,14 @@ export default {
       this.$emit('system-message', `Sent text message: ${textMessage}`);
     },
 
-    sendUserInterrupt() {
-      const interruptData = this.speechTracker.interrupt();
-      if (!interruptData) return;
+    async sendUserInterrupt() {
+      const trackOffet = await this.audioStreamPlayer.interrupt();
+      if (!trackOffet) return;
       
       this.webSocketManager.sendJson({ 
         type: 'interrupt',
-        speech_id: interruptData.speechId,
-        interrupted_at_ms: interruptData.interruptedAtMs
+        speech_id: trackOffet.trackId,
+        interrupted_at: trackOffet.currentTime
       });
     },
 
@@ -259,6 +252,7 @@ export default {
       return [
         { name: 'Meeting at the bar', description: 'You meet a girl at the bar and she invites you to her place.' },
         { name: 'Lovely Wife', description: 'A romantic and affectionate agent.' },
+        { name: 'Best friend', description: 'A best friend agent.' },
         { name: 'STT Test', description: 'A test agent to test the STT.' },
       ];
     }
