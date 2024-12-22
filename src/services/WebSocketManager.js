@@ -73,7 +73,6 @@ export class WebSocketManager {
   };
 
   onMessage = async (event) => {
-    console.log('Message received');
     const arrayBuffer = await event.data.arrayBuffer();
     const dataView = new DataView(arrayBuffer);
     const metadataLength = dataView.getUint32(0);
@@ -81,10 +80,8 @@ export class WebSocketManager {
     const payload = arrayBuffer.slice(4 + metadataLength);
 
     if (metadata.type === 'audio') {
-      console.log('Audio message received');
       this.onAudioMessage?.(payload, metadata);
     } else if (metadata.type === 'message') {
-      console.log('JSON message received');
       this.onJsonMessage?.(metadata);
     } else {
       console.error('Unknown message type:', metadata.type);
