@@ -38,7 +38,6 @@ import { WebSocketManager } from './services/WebSocketManager.js'
 import { AudioFilePlayer } from './services/AudioFilePlayer.js';
 import { WavStreamPlayer } from '/src/lib/wavtools/index.js';
 import { WavRecorder } from '/src/lib/wavtools/index.js';
-import { AssistantSpeechTracker } from './services/AssistantSpeechTracker.js';
 
 export default {
   components: {
@@ -63,7 +62,6 @@ export default {
       userAudioFiles: ["data/jfk_full.mp4", "data/what_is_strength.mp4", "data/virus_en.m4a"],
       inputMode: 'audio',
       agents: [],
-      speechTracker: new AssistantSpeechTracker(),
     }
   },
 
@@ -146,7 +144,6 @@ export default {
     },
 
     disconnect() {
-      this.speechTracker.reset();
       this.audioStreamPlayer.interrupt();
       this.webSocketManager.disconnect();
       this.agentState = 'unselected';
