@@ -177,10 +177,23 @@ export default {
 
     async stopRecordingUserAudio() {
       if (!this.isRecordingUserAudio) return;
-      await this.audioRecorder.end();
+      const userAudio = await this.audioRecorder.end();
       this.webSocketManager.sendJson({ type: 'stop_recording' });
       this.isRecordingUserAudio = false;
+      this.addAudioMessage(userAudio, 'user');
       this.addSystemMessage('Stopped recording user audio');
+    },
+
+    addAudioMessage(audio, role) {
+      const lastUserMessage = this.messages.findLast(m => m.role === role);
+      if (!lastUserMessage) return;
+      const messageId = lastUserMessage.messageId + (role === 'assistant' ? 1000 : 2000);
+      this.updateMessages({
+        role: role,
+        content: audio.url,
+        timestamp: lastUserMessage.timestamp,
+        messageId: messageId
+      });
     },
 
     sendTextMessage(message) {

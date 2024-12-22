@@ -10,8 +10,11 @@
       <div :class="['message-meta', message.role]">
         {{ message.timestamp }} • {{ message.role }}
       </div>
-      <div :class="['message-bubble', message.role]">
-        <span class="content">{{ message.content }}</span>
+      <div :class="['message-bubble', message.role, isAudioMessage(message.content) ? 'audio-message' : '']">
+        <audio v-if="isAudioMessage(message.content)" controls>
+          <source :src="message.content" type="audio/wav">
+        </audio>
+        <span v-else class="content">{{ message.content }}</span>
       </div>
     </div>
   </div>
@@ -28,6 +31,9 @@ export default {
     }
   },
   methods: {
+    isAudioMessage(content) {
+      return content.startsWith('blob:') || content.startsWith('http');
+    },
     scrollToBottom() {
       this.$nextTick(() => {
         if (this.$refs.conversationLog) {
@@ -95,6 +101,11 @@ export default {
 .message-bubble.user {
   background-color: #e8f5e9;
   margin-left: auto;
+}
+
+.message-bubble.audio-message {
+  background-color: transparent;
+  box-shadow: none;
 }
 
 .message-meta {
