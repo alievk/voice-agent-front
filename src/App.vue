@@ -125,6 +125,7 @@ export default {
 
     async connect() {
       try {
+        this.audioStreamPlayer.connect();
         await this.webSocketManager.connect(
           process.env.VUE_APP_WS_HOST || "localhost",
           process.env.VUE_APP_WS_PORT || 8564
