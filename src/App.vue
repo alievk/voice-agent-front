@@ -261,9 +261,10 @@ export default {
     fetchAgents() {
       // Simulated API call
       return [
+        { name: 'STT Test', description: 'A test agent to test the STT.' },
+        { name: 'Best friend', description: 'A best friend agent.' },
         { name: 'Meeting at the bar', description: 'You meet a girl at the bar and she invites you to her place.' },
         { name: 'Lovely Wife', description: 'A romantic and affectionate agent.' },
-        { name: 'STT Test', description: 'A test agent to test the STT.' },
       ];
     }
   },
