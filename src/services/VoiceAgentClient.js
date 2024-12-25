@@ -49,7 +49,7 @@ export class VoiceAgentClient {
   
     isConnected = () => this.socket && this.socket.readyState === WebSocket.OPEN;
   
-    send = (data) => {
+    _send = (data) => {
       if (this.isConnected()) {
         try {
           this.socket.send(data);
@@ -64,12 +64,12 @@ export class VoiceAgentClient {
     };
 
     sendAudioChunk = (chunk) => {
-        this.send(chunk);
+        this._send(chunk);
     }
   
-    sendJson = (data) => {
+    _sendJson = (data) => {
       try {
-        this.send(JSON.stringify(data));
+        this._send(JSON.stringify(data));
       } catch (error) {
         console.error('Failed to stringify message:', error);
         this.emit('error', 'Failed to format message');
@@ -77,27 +77,27 @@ export class VoiceAgentClient {
     };
 
     activateAgent = (agentName) => {
-        this.sendJson({
+        this._sendJson({
             type: 'init',
             agent_name: agentName
         });
     }
 
     sendTextMessage = (message) => {
-        this.sendJson({
+        this._sendJson({
             type: 'manual_text',
             content: message
         });
     }
     
     createResponse = () => {
-        this.sendJson({
+        this._sendJson({
             type: 'create_response'
         });
     }
 
     cancelResponse = (id, interruptedAt) => {
-        this.sendJson({ 
+        this._sendJson({ 
             type: 'interrupt',
             speech_id: id,
             interrupted_at: interruptedAt
