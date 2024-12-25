@@ -1,8 +1,5 @@
 export class VoiceAgentClient {
     socket = null;
-    onConnectionEstablished = null;
-    onAudioMessage = null;
-    onJsonMessage = null;
     eventHandlers = new Map();
   
     connect = async (hostname, port) => {
@@ -13,29 +10,27 @@ export class VoiceAgentClient {
         this.socket = new WebSocket(wsUrl);
   
         this.socket.onopen = () => {
-          this.onConnectionEstablished?.();
+          this.emit('connected');
           resolve();
         };
   
-        this.socket.onerror = (error) => {
-          console.error('WebSocket connection error:', error);
-          this.emit('error', 'Connection error');
-          reject(error);
+        this.socket.onerror = () => {
+          this.emit('error', 'WebSocket connection error');
+          reject();
         };
   
         this.socket.onclose = (event) => {
-          const reason = this.getCloseReason(event.code);
-          console.log(`WebSocket closed: ${reason}`);
-          this.emit('disconnected', `Connection closed: ${reason}`);
+          const reason = this._getCloseReason(event.code);
+          this.emit('disconnected', reason);
         };
-  
+
+        this.socket.onmessage = this._onMessage;
+
         setTimeout(() => {
           if (!this.isConnected()) {
             reject(new Error('WebSocket connection timed out'));
           }
         }, 5000);
-  
-        this.socket.onmessage = this.onMessage;
       });
     };
   
@@ -43,7 +38,6 @@ export class VoiceAgentClient {
       if (this.socket) {
         this.socket.close(1000, "Normal closure");
         this.socket = null;
-        this.emit('disconnected');
       }
     };
   
@@ -54,11 +48,9 @@ export class VoiceAgentClient {
         try {
           this.socket.send(data);
         } catch (error) {
-          console.error('Failed to send message:', error);
-          this.emit('error', 'Failed to send message');
+          this.emit('error', `Failed to send message: ${error}`);
         }
       } else {
-        console.warn('Failed to send message because WebSocket is not connected');
         this.emit('error', 'Failed to send message because WebSocket is not connected');
       }
     };
@@ -71,8 +63,7 @@ export class VoiceAgentClient {
       try {
         this._send(JSON.stringify(data));
       } catch (error) {
-        console.error('Failed to stringify message:', error);
-        this.emit('error', 'Failed to format message');
+        this.emit('error', `Failed to stringify message: ${error.message}`);
       }
     };
 
@@ -115,16 +106,22 @@ export class VoiceAgentClient {
         }
     }
 
-    onMessage = async (event) => {
+    _onMessage = async (event) => {
         const arrayBuffer = await event.data.arrayBuffer();
         const dataView = new DataView(arrayBuffer);
         const metadataLength = dataView.getUint32(0);
         const metadata = JSON.parse(new TextDecoder().decode(arrayBuffer.slice(4, 4 + metadataLength)));
         const payload = arrayBuffer.slice(4 + metadataLength);
-        this.emit('conversation.updated', { metadata, payload });
+        if (metadata.type === 'message' || metadata.type === 'audio') {
+          this.emit('conversation.updated', { metadata, payload });
+        } else if (metadata.type === 'init_done') {
+          this.emit('conversation.started');
+        } else {
+          this.emit('error', `Unknown message type: ${metadata.type}`);
+        }
     }
   
-    getCloseReason = (code) => {
+    _getCloseReason = (code) => {
       const codes = {
         1000: 'Normal closure',
         1001: 'Going away - client/server is disconnecting',

@@ -65,6 +65,23 @@ export default {
 
   methods: {
     setupEventListeners() {
+      this.client.on('connected', () => {
+        this.addSystemMessage('Client connected to server')
+      });
+
+      this.client.on('disconnected', (reason) => {
+        this.addSystemMessage(`Client disconnected from server: ${reason}`)
+      });
+
+      this.client.on('error', (event) => {
+        this.addSystemMessage(`Client error: ${event}`)
+      });
+
+      this.client.on('conversation.started', () => {
+        this.addSystemMessage('Conversation started')
+        this.agentState = 'ready'
+      });
+
       this.client.on('conversation.updated', ({ metadata, payload }) => {
         if (metadata.type === 'audio') {
           this.audioStreamPlayer.add16BitPCM(payload, metadata.speech_id);
@@ -76,7 +93,6 @@ export default {
             messageId: metadata.id
           });
         }
-        this.agentState = "ready";
       });
     },
 
@@ -125,8 +141,7 @@ export default {
         );
         this.client.activateAgent(this.selectedAgent);
       } catch (error) {
-        console.error('Failed to connect to server:', error);
-        this.addSystemMessage('Failed to connect to server');
+        this.addSystemMessage(`Connection failed: ${error}`);
       }
     },
 
