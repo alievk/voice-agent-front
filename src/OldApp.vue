@@ -8,10 +8,13 @@
       
       <MessageInput 
         :isRecordingUserAudio="isRecordingUserAudio"
+        :isPlayingUserAudio="isPlayingUserAudio"
         :inputMode="inputMode"
         :buttonsEnabled="agentState === 'ready'"
+        :userAudioFiles="userAudioFiles"
         @start-recording="startRecordingUserAudio"
         @stop-recording="stopRecordingUserAudio"
+        @toggle-user-audio="toggleUserAudio"
         @send-text="sendTextMessage"
         @input-mode-change="mode => inputMode = mode"
         @system-message="addSystemMessage"
@@ -31,7 +34,8 @@
 import Sidebar from './components/Sidebar.vue'
 import ConversationLog from './components/ConversationLog.vue'
 import MessageInput from './components/MessageInput.vue'
-import { VoiceAgentClient } from './services/VoiceAgentClient.js'
+import { WebSocketManager } from './services/WebSocketManager.js'
+import { AudioFilePlayer } from './services/AudioFilePlayer.js';
 import { WavStreamPlayer } from '/src/lib/wavtools/index.js';
 import { WavRecorder } from '/src/lib/wavtools/index.js';
 
@@ -47,11 +51,15 @@ export default {
       messages: [],
       systemMessages: [],
       selectedAgent: '',
-      client: new VoiceAgentClient(),
+      webSocketManager: new WebSocketManager(),
       agentState: 'unselected',
+      audioFilePlayer: new AudioFilePlayer(),
       audioStreamPlayer: new WavStreamPlayer({ sampleRate: 24000 }),
       audioRecorder: new WavRecorder({ sampleRate: 16000 }),
       isRecordingUserAudio: false,
+      isPlayingUserAudio: [false, false, false],
+      currentUserAudioIndex: null,
+      userAudioFiles: ["data/jfk_full.mp4", "data/what_is_strength.mp4", "data/virus_en.m4a"],
       inputMode: 'audio',
       agents: [],
     }
@@ -60,26 +68,9 @@ export default {
   mounted() {
     this.agents = this.fetchAgents();
     this.audioStreamPlayer.connect();
-    this.setupEventListeners();
   },
 
   methods: {
-    setupEventListeners() {
-      this.client.on('conversation.updated', ({ metadata, payload }) => {
-        if (metadata.type === 'audio') {
-          this.audioStreamPlayer.add16BitPCM(payload, metadata.speech_id);
-        } else if (metadata.type === 'message') {
-          this.updateMessages({
-            role: metadata.role,
-            content: metadata.content,
-            timestamp: metadata.time,
-            messageId: metadata.id
-          });
-        }
-        this.agentState = "ready";
-      });
-    },
-
     updateMessages(data) {
       const { role, content, timestamp, messageId } = data;
 
@@ -116,14 +107,37 @@ export default {
       this.connect();
     },
 
+    handleAudioMessage(audioData, metadata) {
+      this.audioStreamPlayer.add16BitPCM(audioData, metadata.speech_id);
+    },
+
+    handleJsonMessage(metadata) {
+      this.addSystemMessage(`Received message from ${metadata.role}: ${metadata.content}`);
+      this.updateMessages({
+        role: metadata.role,
+        content: metadata.content,
+        timestamp: metadata.time,
+        messageId: metadata.id
+      });
+      this.$emit('connection-established');
+      this.agentState = "ready"; // TODO: we need a special message from the server to know that the connection is established
+    },
+
     async connect() {
       try {
         this.audioStreamPlayer.connect();
-        await this.client.connect(
+        await this.webSocketManager.connect(
           process.env.VUE_APP_WS_HOST || "localhost",
           process.env.VUE_APP_WS_PORT || 8564
-        );
-        this.client.activateAgent(this.selectedAgent);
+        )
+        this.webSocketManager.onAudioMessage = this.handleAudioMessage;
+        this.webSocketManager.onJsonMessage = this.handleJsonMessage;
+        this.webSocketManager.onSystemMessage = this.addSystemMessage;
+        this.webSocketManager.sendJson({
+          type: 'init',
+          agent_name: this.selectedAgent
+        });
+        this.addSystemMessage('Connected to server');
       } catch (error) {
         console.error('Failed to connect to server:', error);
         this.addSystemMessage('Failed to connect to server');
@@ -132,7 +146,7 @@ export default {
 
     disconnect() {
       this.audioStreamPlayer.interrupt();
-      this.client.disconnect();
+      this.webSocketManager.disconnect();
       this.agentState = 'unselected';
     },
 
@@ -141,10 +155,12 @@ export default {
       try {
         await this.sendUserInterrupt();
 
+        this.webSocketManager.sendJson({ type: 'start_recording' });
+
         await this.audioRecorder.begin();
         await this.audioRecorder.record(
           (data) => {
-            this.client.sendAudioChunk(data.mono);
+            this.webSocketManager.send(data.mono);
           }
         );
 
@@ -160,7 +176,7 @@ export default {
     async stopRecordingUserAudio() {
       if (!this.isRecordingUserAudio) return;
       const userAudio = await this.audioRecorder.end();
-      this.client.createResponse();
+      this.webSocketManager.sendJson({ type: 'stop_recording' });
       this.isRecordingUserAudio = false;
       this.addAudioMessage(userAudio, 'user');
       this.addSystemMessage('Stopped recording user audio');
@@ -181,14 +197,65 @@ export default {
     sendTextMessage(message) {
       const textMessage = message.trim();
       if (!textMessage) return;
-      this.client.sendTextMessage(textMessage);
+      this.webSocketManager.sendJson({
+        type: 'manual_text',
+        content: textMessage
+      });
       this.$emit('system-message', `Sent text message: ${textMessage}`);
     },
 
     async sendUserInterrupt() {
       const trackOffet = await this.audioStreamPlayer.interrupt();
       if (!trackOffet) return;
-      this.client.cancelResponse(trackOffet.trackId, trackOffet.currentTime);
+      
+      this.webSocketManager.sendJson({ 
+        type: 'interrupt',
+        speech_id: trackOffet.trackId,
+        interrupted_at: trackOffet.currentTime
+      });
+    },
+
+    async toggleUserAudio(index) {
+      if (this.isPlayingUserAudio[index]) {
+        this.stopUserAudioPlayback();
+      } else {
+        await this.playUserAudio(index);
+      }
+    },
+
+    async playUserAudio(index) {
+      if (this.isPlayingUserAudio.some(playing => playing)) return;
+      this.webSocketManager.sendJson({ type: 'start_recording' });
+      try {
+        const audioUrl = process.env.BASE_URL + this.userAudioFiles[index];
+        await this.audioFilePlayer.play(audioUrl, (event) => {
+          if (event.data.size > 0) {
+            this.webSocketManager.send(event.data);
+          }
+        }, () => {
+          this.webSocketManager.sendJson({ type: 'stop_recording' });
+          this.isPlayingUserAudio[index] = false;
+          this.currentUserAudioIndex = null;
+          this.addSystemMessage(`Stopped playing user audio ${index + 1}`);
+        });
+
+        this.isPlayingUserAudio[index] = true;
+        this.currentUserAudioIndex = index;
+        this.addSystemMessage(`Playing user audio ${index + 1}`);
+      } catch (error) {
+        console.error('Error playing user audio:', error);
+        this.addSystemMessage('Error playing user audio');
+      }
+    },
+
+    stopUserAudioPlayback() {
+      this.webSocketManager.sendJson({ type: 'stop_recording' });
+      this.audioFilePlayer.stop();
+      if (this.currentUserAudioIndex !== null) {
+        this.isPlayingUserAudio[this.currentUserAudioIndex] = false;
+        this.currentUserAudioIndex = null;
+      }
+      this.$emit('system-message', 'Stopped playing user audio');
     },
 
     fetchAgents() {
