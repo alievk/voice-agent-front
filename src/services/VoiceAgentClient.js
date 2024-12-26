@@ -116,6 +116,8 @@ export class VoiceAgentClient {
           this.emit('conversation.updated', { metadata, payload });
         } else if (metadata.type === 'init_done') {
           this.emit('conversation.started');
+        } else if (metadata.type === 'error') {
+          this.emit('error', metadata.error);
         } else {
           this.emit('error', `Unknown message type: ${metadata.type}`);
         }
