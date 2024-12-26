@@ -200,7 +200,8 @@ class AudioProcessor extends AudioWorkletProcessor {
       this.chunks.push(chunk);
       this.sendChunk(chunk);
     }
-    return true;
+    // return true; <--- will cause memory leak
+    return this.recording;
   }
 }
 
