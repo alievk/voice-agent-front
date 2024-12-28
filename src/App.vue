@@ -137,7 +137,8 @@ export default {
         this.audioStreamPlayer.connect();
         await this.client.connect(
           process.env.VUE_APP_WS_HOST || "localhost",
-          process.env.VUE_APP_WS_PORT || 8564
+          process.env.VUE_APP_WS_PORT || 8564,
+          process.env.VUE_APP_WS_TOKEN || ""
         );
         this.client.activateAgent(this.selectedAgent);
       } catch (error) {

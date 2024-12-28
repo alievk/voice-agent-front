@@ -2,11 +2,11 @@ export class VoiceAgentClient {
     socket = null;
     eventHandlers = new Map();
   
-    connect = async (hostname, port) => {
+    connect = async (hostname, port, token) => {
       if (this.isConnected()) return;
   
       return new Promise((resolve, reject) => {
-        const wsUrl = `wss://${hostname}:${port}`;
+        const wsUrl = `wss://${hostname}:${port}/ws?token=${encodeURIComponent(token)}`;
         this.socket = new WebSocket(wsUrl);
   
         this.socket.onopen = () => {
