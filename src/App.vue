@@ -59,7 +59,6 @@ export default {
 
   mounted() {
     this.agents = this.fetchAgents();
-    this.audioStreamPlayer.connect();
     this.setupEventListeners();
   },
 
