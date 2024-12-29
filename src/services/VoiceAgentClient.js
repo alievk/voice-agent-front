@@ -94,6 +94,15 @@ export class VoiceAgentClient {
             interrupted_at: interruptedAt
         });
     }
+
+    invokeLLM = (model, prompt, messages) => {
+        this._sendJson({
+            type: 'invoke_llm',
+            model: model,
+            prompt: prompt,
+            messages: messages
+        });
+    }
   
     on(eventName, handler) {
         this.eventHandlers.set(eventName, handler);
@@ -114,10 +123,12 @@ export class VoiceAgentClient {
         const payload = arrayBuffer.slice(4 + metadataLength);
         if (metadata.type === 'message' || metadata.type === 'audio') {
           this.emit('conversation.updated', { metadata, payload });
+        } else if (metadata.type === 'llm_response') {
+          this.emit('llm.response', { response: metadata });
         } else if (metadata.type === 'init_done') {
           this.emit('conversation.started');
         } else if (metadata.type === 'error') {
-          this.emit('error', metadata.error);
+          this.emit('error', `Error from server: ${metadata.error}`);
         } else {
           this.emit('error', `Unknown message type: ${metadata.type}`);
         }

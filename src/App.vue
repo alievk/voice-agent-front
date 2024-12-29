@@ -20,9 +20,11 @@
     </div>
 
     <Sidebar 
-      @activate-agent="handleActivateAgent" 
+      @activate-agent="handleActivateAgent"
+      @send-prompt="handleSendPrompt"
       :systemMessages="systemMessages"
       :agents="agents"
+      :llmResponse="llmResponse"
     />
   </div>
 </template>
@@ -46,6 +48,7 @@ export default {
     return {
       messages: [],
       systemMessages: [],
+      llmResponse: '',
       selectedAgent: '',
       client: new VoiceAgentClient(),
       agentState: 'unselected',
@@ -92,6 +95,10 @@ export default {
             messageId: metadata.id
           });
         }
+      });
+
+      this.client.on('llm.response', ({ response }) => {
+        this.llmResponse = response.content;
       });
     },
 
@@ -204,6 +211,23 @@ export default {
       const trackOffet = await this.audioStreamPlayer.interrupt();
       if (!trackOffet) return;
       this.client.cancelResponse(trackOffet.trackId, trackOffet.currentTime);
+    },
+
+    handleSendPrompt(data) {
+      if (!this.client.isConnected()) {
+        this.addSystemMessage('Cannot send prompt, client is not connected');
+        return;
+      }
+
+      const conversation = this.messages
+        .map(msg => `${msg.role}: ${msg.content}`)
+        .join('\n');
+
+      this.client.invokeLLM(
+        data.model,
+        data.prompt,
+        [{'role': 'user', 'content': conversation}]
+      );
     },
 
     fetchAgents() {

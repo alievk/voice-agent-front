@@ -9,6 +9,10 @@
       </select>
       <p>{{ agentDescription }}</p>
       <button @click="activateAgent">Activate Agent</button>
+      
+      <hr class="delimiter" />
+      
+      <CustomPrompt @send-prompt="handleSendPrompt" :llmResponse="llmResponse" />
     </div>
     <SystemOutput :systemMessages="systemMessages" />
   </div>
@@ -16,12 +20,14 @@
 
 <script>
 import SystemOutput from './SystemOutput.vue'
+import CustomPrompt from './CustomPrompt.vue'
 
 export default {
   name: 'AppSidebar',
   
   components: {
-    SystemOutput
+    SystemOutput,
+    CustomPrompt
   },
 
   props: {
@@ -31,6 +37,10 @@ export default {
     },
     agents: {
       type: Array,
+      required: true
+    },
+    llmResponse: {
+      type: String,
       required: true
     }
   },
@@ -62,6 +72,10 @@ export default {
 
     activateAgent() {
       this.$emit('activate-agent', this.selectedAgent);
+    },
+
+    handleSendPrompt(data) {
+      this.$emit('send-prompt', data);
     }
   },
 };
@@ -87,20 +101,20 @@ export default {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 h4 {
-  font-size: 24px;
+  font-size: 20px;
   color: #333;
-  margin: 0 0 20px 0;
+  margin: 0 0 12px 0;
   text-align: center;
 }
 
 select {
   width: 100%;
-  padding: 15px;
+  padding: 8px;
   border: 2px solid #e1e1e1;
   border-radius: 12px;
   font-size: 16px;
@@ -123,7 +137,7 @@ p {
 }
 
 button {
-  padding: 15px 30px;
+  padding: 10px 20px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
@@ -148,21 +162,10 @@ button:active {
   transform: translateY(0);
 }
 
-ul {
-  list-style-type: none;
-  padding: 0;
-  margin-top: 20px;
+.delimiter {
   width: 100%;
-}
-
-li {
-  padding: 10px 0;
-  border-bottom: 1px solid #dee2e6;
-  color: #495057;
-  font-size: 0.9rem;
-}
-
-li:last-child {
-  border-bottom: none;
+  border: none;
+  border-top: 2px solid #e1e1e1;
+  margin: 8px 0;
 }
 </style>

@@ -1,8 +1,10 @@
 <template>
-  <div id="system-output" ref="outputContainer">
-    <div v-for="message in systemMessages" :key="message.id" class="system-message">
-      <span class="timestamp">{{ formatTime(message.timestamp) }}</span>
-      {{ message.content }}
+  <div class="system-output-container">
+    <div id="system-output" ref="outputContainer">
+      <div v-for="message in systemMessages" :key="message.id" class="system-message">
+        <span class="timestamp">{{ formatTime(message.timestamp) }}</span>
+        {{ message.content }}
+      </div>
     </div>
   </div>
 </template>
@@ -49,15 +51,19 @@ export default {
 </script>
 
 <style scoped>
+.system-output-container {
+  width: 100%;
+  display: flex;
+}
+
 #system-output {
   width: 100%;
-  height: 150px;
+  height: 120px;
   overflow-y: auto;
-  border: 1px solid #e9ecef;
+  border: 2px solid #e1e1e1;
   padding: 8px;
-  border-radius: 4px;
+  border-radius: 12px;
   background-color: #f8f9fa;
-  margin-bottom: 20px;
   font-family: 'Consolas', 'Monaco', monospace;
   font-size: 12px;
 }
