@@ -313,11 +313,13 @@ export class WavRecorder {
     }
     try {
       const config = {
-        sampleRate: 16000,
-        channelCount: 1,
-        echoCancellation: false,
-        noiseSuppression: false,
-        deviceId: deviceId ? { exact: deviceId } : undefined,
+        audio: {
+          sampleRate: 16000,
+          channelCount: 1,
+          echoCancellation: false,
+          noiseSuppression: false,
+          deviceId: deviceId ? { exact: deviceId } : undefined,
+        }
       };
       this.stream = await navigator.mediaDevices.getUserMedia(config);
     } catch (err) {
