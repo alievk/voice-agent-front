@@ -314,7 +314,6 @@ export class WavRecorder {
     try {
       const config = {
         audio: {
-          sampleRate: 16000,
           channelCount: 1,
           echoCancellation: false,
           noiseSuppression: false,
