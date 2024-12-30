@@ -314,7 +314,6 @@ export class WavRecorder {
     try {
       const config = {
         audio: {
-          channelCount: 1,
           echoCancellation: false,
           noiseSuppression: false,
           deviceId: deviceId ? { exact: deviceId } : undefined,
