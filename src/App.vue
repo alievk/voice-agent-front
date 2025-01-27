@@ -145,8 +145,7 @@ export default {
     async connect() {
       try {
         this.audioStreamPlayer.connect();
-        await this.client.connect();
-        this.client.activateAgent(this.selectedAgent);
+        await this.client.connect(this.selectedAgent);
       } catch (error) {
         this.addSystemMessage(`Connection failed: ${error}`);
       }

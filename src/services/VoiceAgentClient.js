@@ -7,16 +7,32 @@ export class VoiceAgentClient {
         this.eventHandlers = new Map();
     }
   
-    connect = async () => {
-      if (this.isConnected()) return;
-  
+    connect = async (
+      agent_name,
+      agent_config = null,
+      stream_user_stt = true, 
+      stream_output_audio = true,
+      init_greeting = true
+    ) => {
       return new Promise((resolve, reject) => {
+        this.disconnect();
+
         const wsUrl = `wss://${this.hostname}:${this.port}/ws?token=${encodeURIComponent(this.token)}`;
         this.socket = new WebSocket(wsUrl);
   
         this.socket.onopen = () => {
           this.emit('connected');
           resolve();
+
+          this._sendJson({
+            type: 'init',
+            agent_name: agent_name,
+            agent_config: agent_config,
+            stream_user_stt: stream_user_stt,
+            stream_output_audio: stream_output_audio,
+            init_greeting: init_greeting
+          });
+          this.emit('activating');
         };
   
         this.socket.onerror = () => {
@@ -71,13 +87,6 @@ export class VoiceAgentClient {
         this.emit('error', `Failed to stringify message: ${error.message}`);
       }
     };
-
-    activateAgent = (agentName) => {
-        this._sendJson({
-            type: 'init',
-            agent_name: agentName
-        });
-    }
 
     sendTextMessage = (message) => {
         this._sendJson({
