@@ -1,7 +1,7 @@
 <template>
     <div class="custom-prompt">
       <div class="input-row">
-        <textarea v-model="prompt" placeholder="Enter your prompt here..."></textarea>
+        <textarea v-model="prompt" placeholder="Ask a question about the current dialog, e.g. 'Is conversation respectful?'"></textarea>
       </div>
       
       <div class="input-row">
