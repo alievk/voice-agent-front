@@ -1,5 +1,8 @@
 export class VoiceAgentClient {
     constructor(hostname, port, token) {
+        if (!hostname || !port || !token) {
+            throw new Error('Missing required parameters');
+        }
         this.hostname = hostname;
         this.port = port; 
         this.token = token;
@@ -11,71 +14,77 @@ export class VoiceAgentClient {
         this.onMessage = null;
     }
   
-    connect = async (
-      agent_name,
-      agent_config = null,
-      stream_user_stt = true, 
-      stream_output_audio = true,
-      init_greeting = true
-    ) => {
-      return new Promise((resolve, reject) => {
-        this.disconnect();
+    async connect(agent_name, agent_config = null, stream_user_stt = true, 
+      stream_output_audio = true, init_greeting = true) {
+        if (!agent_name) {
+            throw new Error('agent_name is required');
+        }
 
-        const wsUrl = `wss://${this.hostname}:${this.port}/ws?token=${encodeURIComponent(this.token)}`;
-        this.socket = new WebSocket(wsUrl);
-        this.closeReason = null;
-  
-        this.socket.onopen = () => {
-          this._onStatus('connected');
-          resolve();
+        const CONNECTION_TIMEOUT = 5000;
+        
+        return new Promise((resolve, reject) => {
+          this.disconnect();
 
-          this._sendJson({
-            type: 'init',
-            agent_name: agent_name,
-            agent_config: agent_config,
-            stream_user_stt: stream_user_stt,
-            stream_output_audio: stream_output_audio,
-            init_greeting: init_greeting
-          });
-          this._onStatus('activating');
-        };
+          const wsUrl = `wss://${this.hostname}:${this.port}/ws?token=${encodeURIComponent(this.token)}`;
+          this.socket = new WebSocket(wsUrl);
+          this.closeReason = null;
   
-        this.socket.onerror = () => {
-          this._onError('WebSocket connection error');
-          reject();
-        };
-  
-        this.socket.onclose = (event) => {
-          this.closeReason = this._getCloseReason(event.code);
-          this._onStatus('disconnected');
-        };
+          this.socket.onopen = () => {
+            this._onStatus('connected');
+            resolve();
 
-        this.socket.onmessage = this._socketMessageHandler;
-
-        setTimeout(() => {
-          if (!this.isConnected()) {
-            reject(new Error('WebSocket connection timed out'));
-          }
-        }, 5000);
-      });
-    };
+            this._sendJson({
+              type: 'init',
+              agent_name: agent_name,
+              agent_config: agent_config,
+              stream_user_stt: stream_user_stt,
+              stream_output_audio: stream_output_audio,
+              init_greeting: init_greeting
+            });
+            this._onStatus('activating');
+          };
   
-    disconnect = () => {
+          this.socket.onerror = () => {
+            this._onError('WebSocket connection error');
+            reject();
+          };
+  
+          this.socket.onclose = (event) => {
+            this.closeReason = this._getCloseReason(event.code);
+            this._onStatus('disconnected');
+          };
+
+          this.socket.onmessage = this._socketMessageHandler;
+
+          setTimeout(() => {
+            if (!this.isConnected()) {
+              reject(new Error('WebSocket connection timed out'));
+            }
+          }, CONNECTION_TIMEOUT);
+        });
+    }
+  
+    disconnect() {
       if (this.isConnected()) {
         this.socket.close(1000, 'Normal closure');
         this.socket = null;
         this.closeReason = 'Normal closure';
         this._onStatus('disconnected');
       }
-    };
+    }
   
-    isConnected = () => this.socket && this.socket.readyState === WebSocket.OPEN;
+    isConnected() {
+      return this.socket && this.socket.readyState === WebSocket.OPEN;
+    }
 
-    sendAudioChunk = (chunk) => {
+    sendAudioChunk(chunk) {
       this._send(chunk);
     }
 
     sendTextMessage = (message) => {
+      if (!message) {
+        throw new Error('Message is required');
+      }
       this._sendJson({
           type: 'manual_text',
           content: message
@@ -125,42 +134,50 @@ export class VoiceAgentClient {
       }
     };
 
+    /**
+     * Handles incoming socket messages
+     * @private
+     * @param {MessageEvent} event - The WebSocket message event
+     */
     _socketMessageHandler = async (event) => {
-        const arrayBuffer = await event.data.arrayBuffer();
-        const dataView = new DataView(arrayBuffer);
-        const metadataLength = dataView.getUint32(0);
-        const metadata = JSON.parse(new TextDecoder().decode(arrayBuffer.slice(4, 4 + metadataLength)));
-        const payload = arrayBuffer.slice(4 + metadataLength);
-        if (metadata.type === 'message' || metadata.type === 'audio' || metadata.type === 'llm_response') {
-          if (this.onMessage) {
-            this.onMessage(metadata, payload);
-          }
-          console.log(metadata, payload);
-        } else if (metadata.type === 'init_done') {
-          this._onStatus('ready');
-        } else if (metadata.type === 'error') {
-          this._onError(`Server error: ${metadata.error}`);
-        } else {
-          this._onError(`Unknown message type: ${metadata.type}`);
+        try {
+            const arrayBuffer = await event.data.arrayBuffer();
+            const dataView = new DataView(arrayBuffer);
+            const metadataLength = dataView.getUint32(0);
+            const metadata = JSON.parse(new TextDecoder().decode(arrayBuffer.slice(4, 4 + metadataLength)));
+            const payload = arrayBuffer.slice(4 + metadataLength);
+            if (metadata.type === 'message' || metadata.type === 'audio' || metadata.type === 'llm_response') {
+              if (this.onMessage) {
+                this.onMessage(metadata, payload);
+              }
+              console.log(metadata, payload);
+            } else if (metadata.type === 'init_done') {
+              this._onStatus('ready');
+            } else if (metadata.type === 'error') {
+              this._onError(`Server error: ${metadata.error}`);
+            } else {
+              this._onError(`Unknown message type: ${metadata.type}`);
+            }
+        } catch (error) {
+            this._onError(`Failed to process message: ${error.message}`);
         }
     }
 
-      _onStatus = (status) => {
+    _onStatus(status) {
         if (this.status === status) {
-          return;
+            return;
         }
-
         this.status = status;
         if (this.onStatus) {
-          this.onStatus(status);
+            this.onStatus(status);
         }
-      }
+    }
 
-      _onError = (error) => {
-        if (this.onError) {
-          this.onError(error);
-        }
+    _onError = (error) => {
+      if (this.onError) {
+        this.onError(error);
       }
+    }
   
     _getCloseReason = (code) => {
       const codes = {
