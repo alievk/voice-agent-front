@@ -63,30 +63,10 @@ export class VoiceAgentClient {
     };
   
     isConnected = () => this.socket && this.socket.readyState === WebSocket.OPEN;
-  
-    _send = (data) => {
-      if (this.isConnected()) {
-        try {
-          this.socket.send(data);
-        } catch (error) {
-          this.emit('error', `Failed to send message: ${error}`);
-        }
-      } else {
-        this.emit('error', 'Failed to send message because WebSocket is not connected');
-      }
-    };
 
     sendAudioChunk = (chunk) => {
         this._send(chunk);
     }
-  
-    _sendJson = (data) => {
-      try {
-        this._send(JSON.stringify(data));
-      } catch (error) {
-        this.emit('error', `Failed to stringify message: ${error.message}`);
-      }
-    };
 
     sendTextMessage = (message) => {
         this._sendJson({
@@ -128,6 +108,26 @@ export class VoiceAgentClient {
             handler(data);
         }
     }
+
+    _send = (data) => {
+      if (this.isConnected()) {
+        try {
+          this.socket.send(data);
+        } catch (error) {
+          this.emit('error', `Failed to send message: ${error}`);
+        }
+      } else {
+        this.emit('error', 'Failed to send message because WebSocket is not connected');
+      }
+    };
+  
+    _sendJson = (data) => {
+      try {
+        this._send(JSON.stringify(data));
+      } catch (error) {
+        this.emit('error', `Failed to stringify message: ${error.message}`);
+      }
+    };
 
     _onMessage = async (event) => {
         const arrayBuffer = await event.data.arrayBuffer();
