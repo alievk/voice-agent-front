@@ -4,7 +4,11 @@ export class VoiceAgentClient {
         this.port = port; 
         this.token = token;
         this.socket = null;
-        this.eventHandlers = new Map();
+        this.closeReason = null;
+        this.status = 'disconnected';
+        this.onStatus = null;
+        this.onError = null;
+        this.onMessage = null;
     }
   
     connect = async (
@@ -19,9 +23,10 @@ export class VoiceAgentClient {
 
         const wsUrl = `wss://${this.hostname}:${this.port}/ws?token=${encodeURIComponent(this.token)}`;
         this.socket = new WebSocket(wsUrl);
+        this.closeReason = null;
   
         this.socket.onopen = () => {
-          this.emit('connected');
+          this._onStatus('connected');
           resolve();
 
           this._sendJson({
@@ -32,20 +37,20 @@ export class VoiceAgentClient {
             stream_output_audio: stream_output_audio,
             init_greeting: init_greeting
           });
-          this.emit('activating');
+          this._onStatus('activating');
         };
   
         this.socket.onerror = () => {
-          this.emit('error', 'WebSocket connection error');
+          this._onError('WebSocket connection error');
           reject();
         };
   
         this.socket.onclose = (event) => {
-          const reason = this._getCloseReason(event.code);
-          this.emit('disconnected', reason);
+          this.closeReason = this._getCloseReason(event.code);
+          this._onStatus('disconnected');
         };
 
-        this.socket.onmessage = this._onMessage;
+        this.socket.onmessage = this._socketMessageHandler;
 
         setTimeout(() => {
           if (!this.isConnected()) {
@@ -56,57 +61,48 @@ export class VoiceAgentClient {
     };
   
     disconnect = () => {
-      if (this.socket) {
-        this.socket.close(1000, "Normal closure");
+      if (this.isConnected()) {
+        this.socket.close(1000, 'Normal closure');
         this.socket = null;
+        this.closeReason = 'Normal closure';
+        this._onStatus('disconnected');
       }
     };
   
     isConnected = () => this.socket && this.socket.readyState === WebSocket.OPEN;
 
     sendAudioChunk = (chunk) => {
-        this._send(chunk);
+      this._send(chunk);
     }
 
     sendTextMessage = (message) => {
-        this._sendJson({
-            type: 'manual_text',
-            content: message
-        });
+      this._sendJson({
+          type: 'manual_text',
+          content: message
+      });
     }
     
     createResponse = () => {
-        this._sendJson({
-            type: 'create_response'
-        });
+      this._sendJson({
+          type: 'create_response'
+      });
     }
 
     cancelResponse = (id, interruptedAt) => {
-        this._sendJson({ 
-            type: 'interrupt',
-            speech_id: id,
-            interrupted_at: interruptedAt
-        });
+      this._sendJson({ 
+          type: 'interrupt',
+          speech_id: id,
+          interrupted_at: interruptedAt
+      });
     }
 
     invokeLLM = (model, prompt, messages) => {
-        this._sendJson({
-            type: 'invoke_llm',
-            model: model,
-            prompt: prompt,
-            messages: messages
-        });
-    }
-  
-    on(eventName, handler) {
-        this.eventHandlers.set(eventName, handler);
-    }
-
-    emit(eventName, data) {
-        const handler = this.eventHandlers.get(eventName);
-        if (handler) {
-            handler(data);
-        }
+      this._sendJson({
+          type: 'invoke_llm',
+          model: model,
+          prompt: prompt,
+          messages: messages
+      });
     }
 
     _send = (data) => {
@@ -114,10 +110,10 @@ export class VoiceAgentClient {
         try {
           this.socket.send(data);
         } catch (error) {
-          this.emit('error', `Failed to send message: ${error}`);
+          this._onError(`Failed to send message: ${error}`);
         }
       } else {
-        this.emit('error', 'Failed to send message because WebSocket is not connected');
+        this._onError('Failed to send message because WebSocket is not connected');
       }
     };
   
@@ -125,28 +121,46 @@ export class VoiceAgentClient {
       try {
         this._send(JSON.stringify(data));
       } catch (error) {
-        this.emit('error', `Failed to stringify message: ${error.message}`);
+        this._onError(`Failed to stringify message: ${error.message}`);
       }
     };
 
-    _onMessage = async (event) => {
+    _socketMessageHandler = async (event) => {
         const arrayBuffer = await event.data.arrayBuffer();
         const dataView = new DataView(arrayBuffer);
         const metadataLength = dataView.getUint32(0);
         const metadata = JSON.parse(new TextDecoder().decode(arrayBuffer.slice(4, 4 + metadataLength)));
         const payload = arrayBuffer.slice(4 + metadataLength);
-        if (metadata.type === 'message' || metadata.type === 'audio') {
-          this.emit('conversation.updated', { metadata, payload });
-        } else if (metadata.type === 'llm_response') {
-          this.emit('llm.response', { response: metadata });
+        if (metadata.type === 'message' || metadata.type === 'audio' || metadata.type === 'llm_response') {
+          if (this.onMessage) {
+            this.onMessage(metadata, payload);
+          }
+          console.log(metadata, payload);
         } else if (metadata.type === 'init_done') {
-          this.emit('conversation.started');
+          this._onStatus('ready');
         } else if (metadata.type === 'error') {
-          this.emit('error', `Error from server: ${metadata.error}`);
+          this._onError(`Server error: ${metadata.error}`);
         } else {
-          this.emit('error', `Unknown message type: ${metadata.type}`);
+          this._onError(`Unknown message type: ${metadata.type}`);
         }
     }
+
+      _onStatus = (status) => {
+        if (this.status === status) {
+          return;
+        }
+
+        this.status = status;
+        if (this.onStatus) {
+          this.onStatus(status);
+        }
+      }
+
+      _onError = (error) => {
+        if (this.onError) {
+          this.onError(error);
+        }
+      }
   
     _getCloseReason = (code) => {
       const codes = {

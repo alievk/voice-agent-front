@@ -55,7 +55,7 @@ export default {
         process.env.VUE_APP_WS_PORT || 8564,
         process.env.VUE_APP_WS_TOKEN || ""
       ),
-      agentState: 'unselected',
+      agentState: 'disconnected',
       audioStreamPlayer: new WavStreamPlayer({ sampleRate: 24000 }),
       audioRecorder: new WavRecorder({ sampleRate: 16000 }),
       isRecordingUserAudio: false,
@@ -71,24 +71,16 @@ export default {
 
   methods: {
     setupEventListeners() {
-      this.client.on('connected', () => {
-        this.addSystemMessage('Client connected to server')
-      });
+      this.client.onStatus = (status) => {
+        this.addSystemMessage(`Voice agent status: ${status}`);
+        this.agentState = status;
+      };
 
-      this.client.on('disconnected', (reason) => {
-        this.addSystemMessage(`Client disconnected from server: ${reason}`)
-      });
+      this.client.onError = (error) => {
+        this.addSystemMessage(`Voice agent error: ${error}`);
+      };
 
-      this.client.on('error', (event) => {
-        this.addSystemMessage(`Client error: ${event}`)
-      });
-
-      this.client.on('conversation.started', () => {
-        this.addSystemMessage('Conversation started')
-        this.agentState = 'ready'
-      });
-
-      this.client.on('conversation.updated', ({ metadata, payload }) => {
+      this.client.onMessage = (metadata, payload) => {
         if (metadata.type === 'audio') {
           this.audioStreamPlayer.add16BitPCM(payload, metadata.speech_id);
         } else if (metadata.type === 'message') {
@@ -98,12 +90,10 @@ export default {
             timestamp: metadata.time,
             messageId: metadata.id
           });
+        } else if (metadata.type === 'llm_response') {
+          this.llmResponse = metadata.content;
         }
-      });
-
-      this.client.on('llm.response', ({ response }) => {
-        this.llmResponse = response.content;
-      });
+      };
     },
 
     updateMessages(data) {
@@ -138,23 +128,17 @@ export default {
       this.selectedAgent = agentName;
       this.disconnect();
       this.cleanMessages();
-      this.agentState = 'initializing';
       this.connect();
     },
 
     async connect() {
-      try {
-        this.audioStreamPlayer.connect();
-        await this.client.connect(this.selectedAgent);
-      } catch (error) {
-        this.addSystemMessage(`Connection failed: ${error}`);
-      }
+      this.audioStreamPlayer.connect();
+      await this.client.connect(this.selectedAgent);
     },
 
     disconnect() {
       this.audioStreamPlayer.interrupt();
       this.client.disconnect();
-      this.agentState = 'unselected';
     },
 
     async startRecordingUserAudio() {

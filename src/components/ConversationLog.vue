@@ -1,10 +1,10 @@
 <template>
   <div id="conversation-log" ref="conversationLog">
-    <div v-if="agentState === 'unselected'" class="status-message">
+    <div v-if="agentState === 'disconnected'" class="status-message">
       Agent not activated
     </div>
-    <div v-else-if="agentState === 'initializing'" class="status-message">
-      Agent initialization...
+    <div v-else-if="agentState === 'activating'" class="status-message">
+      Agent activation...
     </div>
     <div v-for="message in messages" :key="message.messageId">
       <div :class="['message-meta', message.role]">
@@ -26,8 +26,7 @@ export default {
     messages: Array,
     agentState: {
       type: String,
-      validator: (value) => ['unselected', 'initializing', 'ready'].includes(value),
-      default: 'unselected'
+      default: 'disconnected'
     }
   },
   methods: {
