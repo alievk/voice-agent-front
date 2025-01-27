@@ -2,9 +2,9 @@
   <div class="app-sidebar">
     <div class="sidebar-content">
       <h4>Agent</h4>
-      <select v-model="selectedAgent" @change="updateDescription">
-        <option v-for="agent in agents" :key="agent.name" :value="agent.name">
-          {{ agent.name }}
+      <select v-model="selectedAgentKey" @change="updateDescription">
+        <option v-for="(agent, key) in agents" :key="key" :value="key">
+          {{ agent.title }}
         </option>
       </select>
       <p>{{ agentDescription }}</p>
@@ -36,7 +36,7 @@ export default {
       required: true
     },
     agents: {
-      type: Array,
+      type: Object,
       required: true
     },
     llmResponse: {
@@ -47,7 +47,7 @@ export default {
 
   data() {
     return {
-      selectedAgent: '',
+      selectedAgentKey: '',
       agentDescription: ''
     };
   },
@@ -55,9 +55,10 @@ export default {
   watch: {
     agents: {
       handler(newAgents) {
-        if (newAgents && newAgents.length > 0) {
-          this.selectedAgent = newAgents[0].name;
-          this.agentDescription = newAgents[0].description;
+        if (newAgents && Object.keys(newAgents).length > 0) {
+          const firstAgentKey = Object.keys(newAgents)[0];
+          this.selectedAgentKey = firstAgentKey;
+          this.agentDescription = newAgents[firstAgentKey].description;
         }
       },
       immediate: true
@@ -66,12 +67,11 @@ export default {
 
   methods: {
     updateDescription() {
-      const agent = this.agents.find(agent => agent.name === this.selectedAgent);
-      this.agentDescription = agent ? agent.description : '';
+      this.agentDescription = this.agents[this.selectedAgentKey].description;
     },
 
     activateAgent() {
-      this.$emit('activate-agent', this.selectedAgent);
+      this.$emit('activate-agent', this.selectedAgentKey);
     },
 
     handleSendPrompt(data) {

@@ -49,7 +49,6 @@ export default {
       messages: [],
       systemMessages: [],
       llmResponse: '',
-      selectedAgent: '',
       client: new VoiceAgentClient(
         process.env.VUE_APP_WS_HOST || "localhost",
         process.env.VUE_APP_WS_PORT || 8564,
@@ -60,7 +59,7 @@ export default {
       audioRecorder: new WavRecorder({ sampleRate: 16000 }),
       isRecordingUserAudio: false,
       inputMode: 'audio',
-      agents: [],
+      agents: {}
     }
   },
 
@@ -125,15 +124,14 @@ export default {
     },
 
     handleActivateAgent(agentName) {
-      this.selectedAgent = agentName;
       this.disconnect();
       this.cleanMessages();
-      this.connect();
+      this.connect(agentName);
     },
 
-    async connect() {
+    async connect(agentName) {
       this.audioStreamPlayer.connect();
-      await this.client.connect(this.selectedAgent);
+      await this.client.connect(agentName, this.agents[agentName]);
     },
 
     disconnect() {
@@ -214,13 +212,12 @@ export default {
     },
 
     fetchAgents() {
-      // Simulated API call
-      return [
-        { name: 'STT Test', description: 'A test agent to test the STT.' },
-        { name: 'Best friend', description: 'A best friend agent.' },
-        { name: 'Meeting at the bar', description: 'You meet a girl at the bar and she invites you to her place.' },
-        { name: 'Lovely Wife', description: 'A romantic and affectionate agent.' },
-      ];
+      try {
+        return require('../agents.json');
+      } catch (error) {
+        this.addSystemMessage(`Error loading agents: ${error}`);
+        return [];
+      }
     }
   },
 }

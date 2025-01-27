@@ -14,10 +14,10 @@ export class VoiceAgentClient {
         this.onMessage = null;
     }
   
-    async connect(agent_name, agent_config = null, stream_user_stt = true, 
-      stream_output_audio = true, init_greeting = true) {
-        if (!agent_name) {
-            throw new Error('agent_name is required');
+    async connect(agentName, agentConfig = null, streamUserStt = true, 
+      streamOutputAudio = true, initGreeting = true) {
+        if (!agentName) {
+            throw new Error('agentName is required');
         }
 
         const CONNECTION_TIMEOUT = 5000;
@@ -33,13 +33,17 @@ export class VoiceAgentClient {
             this._onStatus('connected');
             resolve();
 
+            if (agentConfig) {
+              agentConfig = JSON.stringify(agentConfig);
+            }
+
             this._sendJson({
               type: 'init',
-              agent_name: agent_name,
-              agent_config: agent_config,
-              stream_user_stt: stream_user_stt,
-              stream_output_audio: stream_output_audio,
-              init_greeting: init_greeting
+              agent_name: agentName,
+              agent_config: agentConfig,
+              stream_user_stt: streamUserStt,
+              stream_output_audio: streamOutputAudio,
+              init_greeting: initGreeting
             });
             this._onStatus('activating');
           };
@@ -150,7 +154,6 @@ export class VoiceAgentClient {
               if (this.onMessage) {
                 this.onMessage(metadata, payload);
               }
-              console.log(metadata, payload);
             } else if (metadata.type === 'init_done') {
               this._onStatus('ready');
             } else if (metadata.type === 'error') {
