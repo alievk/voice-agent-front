@@ -50,7 +50,11 @@ export default {
       systemMessages: [],
       llmResponse: '',
       selectedAgent: '',
-      client: new VoiceAgentClient(),
+      client: new VoiceAgentClient(
+        process.env.VUE_APP_WS_HOST || "localhost",
+        process.env.VUE_APP_WS_PORT || 8564,
+        process.env.VUE_APP_WS_TOKEN || ""
+      ),
       agentState: 'unselected',
       audioStreamPlayer: new WavStreamPlayer({ sampleRate: 24000 }),
       audioRecorder: new WavRecorder({ sampleRate: 16000 }),
@@ -141,11 +145,7 @@ export default {
     async connect() {
       try {
         this.audioStreamPlayer.connect();
-        await this.client.connect(
-          process.env.VUE_APP_WS_HOST || "localhost",
-          process.env.VUE_APP_WS_PORT || 8564,
-          process.env.VUE_APP_WS_TOKEN || ""
-        );
+        await this.client.connect();
         this.client.activateAgent(this.selectedAgent);
       } catch (error) {
         this.addSystemMessage(`Connection failed: ${error}`);
