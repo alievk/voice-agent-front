@@ -11,8 +11,8 @@ module.exports = defineConfig({
         cert: fs.readFileSync(path.join(__dirname, 'cert.pem')),
       }
     },
-    host: '127.0.0.1',
-    port: 8501,
+    host: '0.0.0.0',
+    port: 8080,
     allowedHosts: 'all',
     webSocketServer: false
   }
