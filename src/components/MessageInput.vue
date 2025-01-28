@@ -21,19 +21,21 @@
         <div v-show="inputMode === 'audio'" class="mode-content">
           <div class="audio-buttons">
             <div class="hint-text">Hold the mic to record. Release to send.</div>
-            <button 
-              @mousedown="handleMouseDown"
-              @mouseup="handleMouseUp"
-              :class="['button', 'record-button', { 'active': isRecordingUserAudio }]"
-              :disabled="!buttonsEnabled"
-            >
-              <img 
-                src="/mic.svg" 
-                alt="Microphone" 
-                class="mic-icon"
-                :class="{ 'recording': isRecordingUserAudio }"
+            <div @click="checkDisabled" class="record-button-wrapper">
+              <button 
+                @mousedown="handleMouseDown"
+                @mouseup="handleMouseUp"
+                :class="['button', 'record-button', { 'active': isRecordingUserAudio }]"
+                :style="!buttonsEnabled ? { opacity: 0.5, cursor: 'not-allowed' } : {}"
               >
-            </button>
+                <img 
+                  src="/mic.svg" 
+                  alt="Microphone" 
+                  class="mic-icon"
+                  :class="{ 'recording': isRecordingUserAudio }"
+                >
+              </button>
+            </div>
             <div class="play-buttons">
               <button 
                 v-for="(audio, index) in userAudioFiles" 
@@ -91,6 +93,10 @@ export default {
   },
   methods: {
     handleMouseDown() {
+      if (!this.buttonsEnabled) {
+        alert('Please activate an agent in the sidebar before recording voice.');
+        return;
+      }
       this.mouseDownTime = Date.now();
       this.$emit('start-recording');
     },
@@ -348,5 +354,10 @@ input:checked + .slider:before {
   color: #666;
   margin-bottom: 12px;
   text-align: center;
+}
+
+.record-button-wrapper {
+  display: inline-block;
+  cursor: pointer;
 }
 </style>
