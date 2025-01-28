@@ -20,13 +20,19 @@
         <!-- Audio mode -->
         <div v-show="inputMode === 'audio'" class="mode-content">
           <div class="audio-buttons">
+            <div class="hint-text">Hold the mic to record. Release to send.</div>
             <button 
               @mousedown="handleMouseDown"
               @mouseup="handleMouseUp"
               :class="['button', 'record-button', { 'active': isRecordingUserAudio }]"
               :disabled="!buttonsEnabled"
             >
-              {{ isRecordingUserAudio ? 'Release to Send' : 'Hold to Talk' }}
+              <img 
+                src="/mic.svg" 
+                alt="Microphone" 
+                class="mic-icon"
+                :class="{ 'recording': isRecordingUserAudio }"
+              >
             </button>
             <div class="play-buttons">
               <button 
@@ -154,7 +160,14 @@ export default {
 .record-button {
   background-color: #ffffff;
   color: #333333;
-  border-color: #e74c3c;
+  border-color: #d1d5db;
+  width: 60px;  /* Added width */
+  height: 60px;  /* Added height */
+  border-radius: 50%;  /* Make it perfectly circular */
+  padding: 0;  /* Remove default padding */
+  display: flex;  /* Center the mic icon */
+  align-items: center;
+  justify-content: center;
 }
 
 .record-button:hover {
@@ -162,8 +175,8 @@ export default {
 }
 
 .record-button.active {
-  background-color: #e74c3c;
-  color: white;
+  background-color: #ffffff;
+  color: #333333;
 }
 
 .play-buttons {
@@ -316,5 +329,24 @@ input:checked + .slider:before {
   width: 100%;
   display: flex;
   justify-content: center;
+}
+
+.mic-icon {
+  width: 30px;  /* Increased from 20px */
+  height: 30px;  /* Increased from 20px */
+  vertical-align: middle;
+  transition: transform 0.3s ease;
+}
+
+.mic-icon.recording {
+  filter: invert(27%) sepia(51%) saturate(2878%) hue-rotate(346deg) brightness(104%) contrast(97%);
+  transform: scale(1.2);  /* Makes the mic 20% bigger when recording */
+}
+
+.hint-text {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 12px;
+  text-align: center;
 }
 </style>
