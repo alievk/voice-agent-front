@@ -7,8 +7,8 @@ module.exports = defineConfig({
     server: {
       type: 'https',
       options: {
-        key: fs.readFileSync(path.join(__dirname, 'localhost+2-key.pem')),
-        cert: fs.readFileSync(path.join(__dirname, 'localhost+2.pem')),
+        key: fs.readFileSync(path.join(__dirname, 'key.pem')),
+        cert: fs.readFileSync(path.join(__dirname, 'cert.pem')),
       }
     },
     host: '127.0.0.1',
