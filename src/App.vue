@@ -25,6 +25,7 @@
       :systemMessages="systemMessages"
       :agents="agents"
       :llmResponse="llmResponse"
+      :client="client"
     />
   </div>
 </template>

@@ -118,6 +118,23 @@ export class VoiceAgentClient {
       });
     }
 
+    async getMetrics() {
+      try {
+        const response = await fetch(`https://${this.hostname}:${this.port}/metrics`, {
+          headers: {
+            'API-Key': process.env.VUE_APP_API_KEY
+          }
+        });
+        if (!response.ok) {
+          throw new Error(`Response status: ${response.status}`);
+        }
+        return await response.json();
+      } catch (error) {
+        this._onError(`Failed to fetch metrics: ${error.message}`);
+        return { active_connections: 0 };
+      }
+    }
+
     _send = (data) => {
       if (this.isConnected()) {
         try {

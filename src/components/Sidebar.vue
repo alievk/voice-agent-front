@@ -1,7 +1,7 @@
 <template>
   <div class="app-sidebar">
     <div class="sidebar-content">
-      <h4>Agent</h4>
+      <p>Agent:</p>
       <select v-model="selectedAgentKey" @change="updateDescription">
         <option v-for="(agent, key) in agents" :key="key" :value="key">
           {{ agent.title }}
@@ -12,9 +12,21 @@
       
       <hr class="delimiter" />
       
+      <p>Custom prompt:</p>
       <CustomPrompt @send-prompt="handleSendPrompt" :llmResponse="llmResponse" />
+
+      <hr class="delimiter" />
+
+      <p>Server metrics:</p>
+      <div class="metrics">
+        <p>Active Connections: {{ metrics.active_connections }}</p>
+      </div>
+
+      <hr class="delimiter" />
+
+      <p>System output:</p>
+      <SystemOutput :systemMessages="systemMessages" />
     </div>
-    <SystemOutput :systemMessages="systemMessages" />
   </div>
 </template>
 
@@ -42,14 +54,26 @@ export default {
     llmResponse: {
       type: String,
       required: true
+    },
+    client: {
+      type: Object,
+      required: true
     }
   },
 
   data() {
     return {
       selectedAgentKey: '',
-      agentDescription: ''
+      agentDescription: '',
+      metrics: {
+        active_connections: 0
+      }
     };
+  },
+
+  created() {
+    this.updateMetrics();
+    setInterval(this.updateMetrics, 5000);
   },
 
   watch: {
@@ -66,6 +90,10 @@ export default {
   },
 
   methods: {
+    async updateMetrics() {
+      this.metrics = await this.client.getMetrics();
+    },
+
     updateDescription() {
       this.agentDescription = this.agents[this.selectedAgentKey].description;
     },
@@ -167,5 +195,14 @@ button:active {
   border: none;
   border-top: 2px solid #e1e1e1;
   margin: 8px 0;
+}
+
+.metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #e1e1e1;
+  border-radius: 12px;
 }
 </style>
