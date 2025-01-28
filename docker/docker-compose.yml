@@ -1,0 +1,28 @@
+version: '3.8'
+
+networks:
+  default:
+    name: voice_agent_front_network
+    driver: bridge
+
+services:
+  voice_agent_front:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${USER_ID}
+        GROUP_ID: ${GROUP_ID}
+    container_name: voice_agent_front_container
+    deploy:
+      resources:
+        limits:
+          cpus: '8'
+          memory: 16g
+    ports:
+      - "443:8080"
+    volumes:
+      - ${HOME}/.gitconfig:/home/user/.gitconfig:ro
+      - ${HOME}/sources:/home/user/sources
+      - ${HOME}/.cursor-server:/home/user/.cursor-server
+      - ${HOME}/.cache:/home/user/.cache
