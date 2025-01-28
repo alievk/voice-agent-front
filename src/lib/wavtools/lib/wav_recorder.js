@@ -243,7 +243,7 @@ export class WavRecorder {
       name: 'microphone',
     });
     if (permissionStatus.state === 'denied') {
-      window.alert('You must grant microphone access to use this feature.');
+      return false;
     } else if (permissionStatus.state === 'prompt') {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -252,7 +252,7 @@ export class WavRecorder {
         const tracks = stream.getTracks();
         tracks.forEach((track) => track.stop());
       } catch (e) {
-        window.alert('You must grant microphone access to use this feature.');
+        return false;
       }
     }
     return true;

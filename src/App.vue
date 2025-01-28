@@ -1,32 +1,43 @@
 <template>
   <div class="app-container">
-    <div class="main-content">
-      <ConversationLog 
-        :messages="messages" 
-        :agentState="agentState"
-      />
-      
-      <MessageInput 
-        :isRecordingUserAudio="isRecordingUserAudio"
-        :inputMode="inputMode"
-        :buttonsEnabled="agentState === 'ready'"
-        @start-recording="startRecordingUserAudio"
-        @stop-recording="stopRecordingUserAudio"
-        @send-text="sendTextMessage"
-        @input-mode-change="mode => inputMode = mode"
-        @system-message="addSystemMessage"
-        @clean-messages="cleanMessages"
-      />
+    <div v-if="!microphonePermissionGranted" class="permission-check">
+      <div class="permission-content">
+        <h2>Microphone Access Required</h2>
+        <p>This app needs access to your microphone to function properly.</p>
+        <button @click="checkMicrophonePermission" class="permission-button">
+          Continue
+        </button>
+      </div>
     </div>
+    <template v-else>
+      <div class="main-content">
+        <ConversationLog 
+          :messages="messages" 
+          :agentState="agentState"
+        />
+        
+        <MessageInput 
+          :isRecordingUserAudio="isRecordingUserAudio"
+          :inputMode="inputMode"
+          :buttonsEnabled="agentState === 'ready'"
+          @start-recording="startRecordingUserAudio"
+          @stop-recording="stopRecordingUserAudio"
+          @send-text="sendTextMessage"
+          @input-mode-change="mode => inputMode = mode"
+          @system-message="addSystemMessage"
+          @clean-messages="cleanMessages"
+        />
+      </div>
 
-    <Sidebar 
-      @activate-agent="handleActivateAgent"
-      @send-prompt="handleSendPrompt"
-      :systemMessages="systemMessages"
-      :agents="agents"
-      :llmResponse="llmResponse"
-      :client="client"
-    />
+      <Sidebar 
+        @activate-agent="handleActivateAgent"
+        @send-prompt="handleSendPrompt"
+        :systemMessages="systemMessages"
+        :agents="agents"
+        :llmResponse="llmResponse"
+        :client="client"
+      />
+    </template>
   </div>
 </template>
 
@@ -60,16 +71,26 @@ export default {
       audioRecorder: new WavRecorder({ sampleRate: 16000 }),
       isRecordingUserAudio: false,
       inputMode: 'audio',
-      agents: {}
+      agents: {},
+      microphonePermissionGranted: false
     }
   },
 
   mounted() {
+    this.checkMicrophonePermission();
     this.agents = this.fetchAgents();
     this.setupEventListeners();
   },
 
   methods: {
+    async checkMicrophonePermission() {
+      const granted = await this.audioRecorder.requestPermission();
+      this.microphonePermissionGranted = granted;
+      if (!granted) {
+        window.alert('Grant microphone access manually in browser settings.');
+      }
+    },
+
     setupEventListeners() {
       this.client.onStatus = (status) => {
         this.addSystemMessage(`Voice agent status: ${status}`);
@@ -233,6 +254,39 @@ body {
 .app-container {
   display: flex;
   height: 100vh;
+}
+
+.permission-check {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f5f5f5;
+}
+
+.permission-content {
+  text-align: center;
+  padding: 2rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.permission-button {
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  color: white;
+  background-color: #4CAF50;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.permission-button:hover {
+  background-color: #45a049;
 }
 
 .main-content {
