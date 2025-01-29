@@ -36,6 +36,7 @@
         :agents="agents"
         :llmResponse="llmResponse"
         :client="client"
+        :agentState="agentState"
       />
     </template>
   </div>

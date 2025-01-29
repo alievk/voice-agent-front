@@ -1,10 +1,7 @@
 <template>
   <div id="conversation-log" ref="conversationLog">
     <div v-if="agentState === 'disconnected'" class="status-message">
-      Agent not activated
-    </div>
-    <div v-else-if="agentState === 'activating'" class="status-message">
-      Agent activation...
+      Here will appear your conversation
     </div>
     <div v-for="message in messages" :key="message.messageId">
       <div :class="['message-meta', message.role]">

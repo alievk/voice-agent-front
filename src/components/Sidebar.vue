@@ -8,7 +8,12 @@
         </option>
       </select>
       <p>{{ agentDescription }}</p>
-      <button @click="activateAgent">Activate Agent</button>
+      <button 
+        @click="activateAgent" 
+        :disabled="agentState === 'connected' || agentState === 'activating'"
+      >
+        {{ agentState === 'connected' || agentState === 'activating' ? 'Agent activating...' : 'Activate agent' }}
+      </button>
       
       <hr class="delimiter" />
       
@@ -57,6 +62,10 @@ export default {
     },
     client: {
       type: Object,
+      required: true
+    },
+    agentState: {
+      type: String,
       required: true
     }
   },
@@ -188,6 +197,19 @@ button:hover {
 
 button:active {
   transform: translateY(0);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+button:disabled:hover {
+  background-color: #3498db;
+  transform: none;
+  box-shadow: none;
 }
 
 .delimiter {
