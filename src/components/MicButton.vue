@@ -6,7 +6,6 @@
       @mouseleave="endInteraction"
       :class="buttonClasses"
       :aria-label="ariaLabel"
-      :disabled="!enabled"
     >
       <img 
         src="/mic.svg" 
@@ -68,8 +67,8 @@ export default {
   methods: {
     startInteraction() {
       if (!this.enabled) {
-        this.showDisabledMessage()
-        return
+        this.showDisabledMessage();
+        return;
       }
 
       this.isAnimating = true
@@ -97,7 +96,7 @@ export default {
     },
 
     showDisabledMessage() {
-      alert('Please activate an agent in the sidebar before recording voice.')
+      window.alert('Please activate an agent in the sidebar before recording voice.');
     }
   },
 
