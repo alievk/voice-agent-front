@@ -73,16 +73,16 @@
     font-size: 14px;
     background-color: #f8f9fa;
     transition: all 0.2s ease;
+    
+    &:hover {
+      border-color: #3498db;
+      background-color: #fff;
+    }
   }
 
   select {
     padding: 8px;
     cursor: pointer;
-  }
-
-  select:hover {
-    border-color: #3498db;
-    background-color: #fff;
   }
 
   button {
@@ -98,17 +98,15 @@
     text-transform: uppercase;
     letter-spacing: 1px;
     align-self: center;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  }
-
-  button:hover {
-    background-color: #2980b9;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  }
-
-  button:active {
-    transform: translateY(0);
+    
+    &:hover {
+      background-color: #2980b9;
+      transform: translateY(-2px);
+    }
+    
+    &:active {
+      transform: translateY(0);
+    }
   }
 
   textarea {
@@ -116,15 +114,10 @@
     padding: 12px;
     resize: vertical;
     margin-bottom: 8px;
-  }
-
-  textarea:hover {
-    border-color: #3498db;
-    background-color: #fff;
-  }
-
-  textarea[readonly] {
-    background-color: #f1f3f5;
-    cursor: default;
+    
+    &[readonly] {
+      background-color: #f1f3f5;
+      cursor: default;
+    }
   }
   </style>

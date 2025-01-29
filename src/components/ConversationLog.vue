@@ -68,11 +68,26 @@ export default {
 .message-bubble {
   margin-bottom: 16px;
   padding: 10px;
-  background-color: #ffffff;
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   max-width: 70%;
   width: fit-content;
+  
+  &.assistant {
+    background-color: #ffffff;
+    margin-right: auto;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  &.user {
+    background-color: #e8f5e9;
+    margin-left: auto;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  &.audio-message {
+    background-color: transparent;
+    box-shadow: none;
+  }
 }
 
 .timestamp {
@@ -90,21 +105,6 @@ export default {
   text-align: center;
   color: #6c757d;
   padding: 20px;
-}
-
-.message-bubble.assistant {
-  background-color: #ffffff;
-  margin-right: auto;
-}
-
-.message-bubble.user {
-  background-color: #e8f5e9;
-  margin-left: auto;
-}
-
-.message-bubble.audio-message {
-  background-color: transparent;
-  box-shadow: none;
 }
 
 .message-meta {

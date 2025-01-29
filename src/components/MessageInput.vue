@@ -113,6 +113,7 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
+  min-height: 180px;
 }
 
 .button {
@@ -125,19 +126,17 @@ export default {
   transition: all 0.3s ease;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  margin: 5px;
   background-color: #ffffff;
   color: #333333;
-}
-
-.button:hover {
-  background-color: #f3f4f6;
-}
-
-.button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  
+  &:hover {
+    background-color: #f3f4f6;
+  }
+  
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
 .play-buttons {
@@ -256,7 +255,7 @@ input:checked + .slider:before {
 }
 
 .fixed-height {
-  height: 200px;
+  min-height: 180px;
   display: flex;
   flex-direction: column;
   justify-content: center;
