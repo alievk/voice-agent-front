@@ -3,6 +3,7 @@
     <button 
       @mousedown="handleMouseDown"
       @mouseup="handleMouseUp"
+      @mouseleave="handleMouseLeave"
       :class="['button', 'record-button', { 'active': isRecording }]"
       :style="!enabled ? { opacity: 0.5, cursor: 'not-allowed' } : {}"
     >
@@ -46,6 +47,11 @@ export default {
       } else {
         this.$emit('stop-recording');
       }
+    },
+    handleMouseLeave() {
+      if (this.isRecording) {
+        this.$emit('stop-recording');
+      }
     }
   }
 }
@@ -67,6 +73,8 @@ export default {
   transition: all 0.3s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   cursor: pointer;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .record-button:hover {
@@ -83,6 +91,9 @@ export default {
   height: 30px;
   vertical-align: middle;
   transition: transform 0.3s ease;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
 }
 
 .mic-icon.recording {
