@@ -20,7 +20,7 @@
         <!-- Audio mode -->
         <div v-show="inputMode === 'audio'" class="mode-content">
           <div class="audio-buttons">
-            <div class="hint-text">Hold the mic to record. Release to send.</div>
+            <div class="hint-text"><strong>Hold</strong> the mic to record. <strong>Release</strong> to send.</div>
             <MicButton 
               :is-recording="isRecordingUserAudio"
               :enabled="buttonsEnabled"
