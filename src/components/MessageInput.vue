@@ -21,21 +21,12 @@
         <div v-show="inputMode === 'audio'" class="mode-content">
           <div class="audio-buttons">
             <div class="hint-text">Hold the mic to record. Release to send.</div>
-            <div @click="checkDisabled" class="record-button-wrapper">
-              <button 
-                @mousedown="handleMouseDown"
-                @mouseup="handleMouseUp"
-                :class="['button', 'record-button', { 'active': isRecordingUserAudio }]"
-                :style="!buttonsEnabled ? { opacity: 0.5, cursor: 'not-allowed' } : {}"
-              >
-                <img 
-                  src="/mic.svg" 
-                  alt="Microphone" 
-                  class="mic-icon"
-                  :class="{ 'recording': isRecordingUserAudio }"
-                >
-              </button>
-            </div>
+            <MicButton 
+              :is-recording="isRecordingUserAudio"
+              :enabled="buttonsEnabled"
+              @start-recording="$emit('start-recording')"
+              @stop-recording="$emit('stop-recording')"
+            />
             <div class="play-buttons">
               <button 
                 v-for="(audio, index) in userAudioFiles" 
@@ -74,7 +65,12 @@
 </template>
 
 <script>
+import MicButton from './MicButton.vue'
+
 export default {
+  components: {
+    MicButton
+  },
   props: {
     isRecordingUserAudio: Boolean,
     isPlayingUserAudio: Array,
@@ -87,29 +83,10 @@ export default {
   },
   data() {
     return {
-      textMessage: '',
-      mouseDownTime: null
+      textMessage: ''
     }
   },
   methods: {
-    handleMouseDown() {
-      if (!this.buttonsEnabled) {
-        alert('Please activate an agent in the sidebar before recording voice.');
-        return;
-      }
-      this.mouseDownTime = Date.now();
-      this.$emit('start-recording');
-    },
-
-    handleMouseUp() {
-      const timeDiff = Date.now() - this.mouseDownTime;
-      if (timeDiff < 200) {
-        setTimeout(() => this.$emit('stop-recording'), 1000);
-      } else {
-        this.$emit('stop-recording');
-      }
-    },
-
     sendTextMessage() {
       if (!this.textMessage.trim()) return;
       this.$emit('send-text', this.textMessage.trim());
@@ -144,7 +121,7 @@ export default {
   font-weight: 600;
   cursor: pointer;
   border: 1px solid #d1d5db;
-  border-radius: 20px; /* Increased border-radius for more rounded corners */
+  border-radius: 20px;
   transition: all 0.3s ease;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -161,28 +138,6 @@ export default {
 .button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.record-button {
-  background-color: #ffffff;
-  color: #333333;
-  border-color: #d1d5db;
-  width: 60px;  /* Added width */
-  height: 60px;  /* Added height */
-  border-radius: 50%;  /* Make it perfectly circular */
-  padding: 0;  /* Remove default padding */
-  display: flex;  /* Center the mic icon */
-  align-items: center;
-  justify-content: center;
-}
-
-.record-button:hover {
-  background-color: #fff5f5;
-}
-
-.record-button.active {
-  background-color: #ffffff;
-  color: #333333;
 }
 
 .play-buttons {
@@ -296,13 +251,12 @@ input:checked + .slider:before {
   transform: translateX(16px);
 }
 
-/* Optional: hover effect */
 .slider:hover:before {
   box-shadow: 0 0 1px #34c759;
 }
 
 .fixed-height {
-  height: 200px; /* Adjust this value as needed */
+  height: 200px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -337,27 +291,10 @@ input:checked + .slider:before {
   justify-content: center;
 }
 
-.mic-icon {
-  width: 30px;  /* Increased from 20px */
-  height: 30px;  /* Increased from 20px */
-  vertical-align: middle;
-  transition: transform 0.3s ease;
-}
-
-.mic-icon.recording {
-  filter: invert(27%) sepia(51%) saturate(2878%) hue-rotate(346deg) brightness(104%) contrast(97%);
-  transform: scale(1.2);  /* Makes the mic 20% bigger when recording */
-}
-
 .hint-text {
   font-size: 13px;
   color: #666;
   margin-bottom: 12px;
   text-align: center;
-}
-
-.record-button-wrapper {
-  display: inline-block;
-  cursor: pointer;
 }
 </style>
