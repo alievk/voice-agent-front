@@ -19,7 +19,7 @@
         <MessageInput 
           :isRecordingUserAudio="isRecordingUserAudio"
           :inputMode="inputMode"
-          :buttonsEnabled="agentState === 'ready'"
+          :agentState="agentState"
           @start-recording="startRecordingUserAudio"
           @stop-recording="stopRecordingUserAudio"
           @send-text="sendTextMessage"

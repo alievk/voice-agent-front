@@ -23,7 +23,7 @@
             <div class="hint-text"><strong>Hold</strong> the mic to record. <strong>Release</strong> to send.</div>
             <MicButton 
               :is-recording="isRecordingUserAudio"
-              :enabled="buttonsEnabled"
+              :enabled="agentState === 'ready'"
               @start-recording="$emit('start-recording')"
               @stop-recording="$emit('stop-recording')"
             />
@@ -33,7 +33,7 @@
                 :key="index" 
                 @click="() => toggleUserAudio(index)" 
                 :class="['button', 'play-button', { 'active': isPlayingUserAudio[index] }]"
-                :disabled="!buttonsEnabled"
+                :disabled="agentState !== 'ready'"
               >
                 {{ isPlayingUserAudio[index] ? `Stop ${index + 1}` : `Play ${index + 1}` }}
               </button>
@@ -53,7 +53,7 @@
             <button 
               @click="sendTextMessage" 
               :class="['button', 'send-button']"
-              :disabled="!buttonsEnabled"
+              :disabled="agentState !== 'ready'"
             >
               Send
             </button>
@@ -75,7 +75,7 @@ export default {
     isRecordingUserAudio: Boolean,
     isPlayingUserAudio: Array,
     inputMode: String,
-    buttonsEnabled: Boolean,
+    agentState: String,
     userAudioFiles: {
       type: Array,
       default: () => []
